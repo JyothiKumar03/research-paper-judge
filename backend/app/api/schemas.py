@@ -1,8 +1,21 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 
 class EvaluateRequest(BaseModel):
     arxiv_url: str
+
+
+class AgentScoreItem(BaseModel):
+    name: str
+    wave: str  # "sanity_check" or "fraud_check"
+    status: str
+    score: float | None
+    findings_count: int
+
+
+class RunEvalResponse(BaseModel):
+    paper_id: str
+    agents: list[AgentScoreItem]
 
 
 class EvaluateResponse(BaseModel):
@@ -13,3 +26,4 @@ class EvaluateResponse(BaseModel):
     submitted_date: str
     page_count: int
     tagged_count: int
+    agent_scores: dict[str, float | None] = {}
