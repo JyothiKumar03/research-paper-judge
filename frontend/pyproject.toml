@@ -1,0 +1,14 @@
+[project]
+name = "research-validator-frontend"
+version = "0.1.0"
+description = "Research Validator Frontend - Streamlit"
+requires-python = ">=3.11"
+
+dependencies = [
+    "streamlit>=1.40.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+]
+
+# No packages to build — frontend is a single script (app.py).
+# Use: uv pip install streamlit httpx python-dotenv
