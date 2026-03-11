@@ -222,8 +222,8 @@ DEFAULT_SCORE:  float = 50.0
 
 class ModelID(StrEnum):
     # --- Native Gemini API (google/* prefix routes to Gemini API directly) ---
-    GEMINI_25_FLASH = "gemini-2.5-flash"   # fast, multimodal, best quality
-    GEMINI_20_FLASH = "gemini-2.0-flash"   # fallback Gemini model
+    GEMINI_25_FLASH = "google/gemini-2.5-flash"
+    GEMINI_20_FLASH = "google/gemini-2.0-flash"
 
     # --- OpenRouter free models (vision-capable) ---
     XIAOMI_MIMO_FLASH = "xiaomi/mimo-v2-flash:free"
