@@ -322,11 +322,16 @@ def _build_markdown(
     ]
 
     if factcheck_verified:
-        lines += ["**Verified Claims:**", ""]
+        lines += [
+            "**Verified Claims:**",
+            "",
+            "| Page | Claim |",
+            "|------|-------|",
+        ]
         for vc in factcheck_verified:
             page = vc.get("page_no", "?") if isinstance(vc, dict) else "?"
             claim = vc.get("claim", "") if isinstance(vc, dict) else str(vc)
-            lines.append(f"- ✅ **(page {page})** {claim}")
+            lines.append(f"| ✅ page {page} | {claim} |")
         lines.append("")
 
     if factcheck_findings:
