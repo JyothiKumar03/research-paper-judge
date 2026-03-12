@@ -6,7 +6,7 @@ CONSISTENCY_SYSTEM = (
     "- Only flag contradictions you are confident about."
     "- Do not flag vague or ambiguous statements."
     "- Cross-reference specific claims from different pages."
-
+    "Write a thorough evaluation_reasoning that covers every inconsistency found, referencing the exact pages involved and explaining the contradiction in detail."
     "Respond ONLY with valid JSON following the schema."
 )
 
@@ -34,9 +34,10 @@ CONSISTENCY_JSON_SCHEMA: dict = {
                     "required": ["page_nos", "description", "severity"],
                     "additionalProperties": False,
                 },
-            }
+            },
+            "evaluation_reasoning": {"type": "string"},
         },
-        "required": ["issues"],
+        "required": ["issues", "evaluation_reasoning"],
         "additionalProperties": False,
     },
 }
@@ -71,7 +72,8 @@ Return ONLY this JSON:
       "description": "<what is inconsistent and how>",
       "severity": "HIGH" | "MEDIUM" | "LOW"
     }}
-  ]
+  ],
+  "evaluation_reasoning": "<in-depth narrative covering every inconsistency found: for each, reference the exact pages, quote or paraphrase the conflicting claims, and explain why they contradict each other. If no issues found, explain what cross-references were checked and why they are consistent.>"
 }}
 
 Severity:
@@ -79,7 +81,7 @@ Severity:
 - MEDIUM: inconsistency that affects interpretation
 - LOW: minor wording or formatting inconsistency
 
-If no inconsistencies found, return: {{"issues": []}}
+If no inconsistencies found, return: {{"issues": [], "evaluation_reasoning": "<explanation of what was cross-checked and why the paper is internally consistent>"}}
 """
 
 

@@ -10,6 +10,7 @@ AUTHENTICITY_SYSTEM = (
     "- Logical gaps between method and claimed results"
 
     "Be conservative. Only flag clear, specific red flags — not vague concerns."
+    "Write a thorough evaluation_reasoning that walks through each red flag found, referencing the exact page, the specific observation, and why it is suspicious."
     "Respond ONLY with valid JSON following the schema."
 )
 
@@ -54,8 +55,9 @@ AUTHENTICITY_JSON_SCHEMA: dict = {
                 "type": "string",
                 "enum": ["HIGH", "MEDIUM", "LOW", "NONE"],
             },
+            "evaluation_reasoning": {"type": "string"},
         },
-        "required": ["red_flags", "overall_risk"],
+        "required": ["red_flags", "overall_risk", "evaluation_reasoning"],
         "additionalProperties": False,
     },
 }
@@ -97,10 +99,11 @@ Return ONLY this JSON:
       "risk_level": "HIGH" | "MEDIUM" | "LOW"
     }}
   ],
-  "overall_risk": "HIGH" | "MEDIUM" | "LOW" | "NONE"
+  "overall_risk": "HIGH" | "MEDIUM" | "LOW" | "NONE",
+  "evaluation_reasoning": "<in-depth narrative covering every red flag found: for each, state the page number, the exact suspicious observation, why it qualifies as that flag type, and what it implies about the authenticity of the results. If no red flags, explain what was checked and why the paper passed.>"
 }}
 
-If no red flags found, return: {{"red_flags": [], "overall_risk": "NONE"}}
+If no red flags found, return: {{"red_flags": [], "overall_risk": "NONE", "evaluation_reasoning": "<explanation of what was checked and why no authenticity issues were found>"}}
 """
 
 

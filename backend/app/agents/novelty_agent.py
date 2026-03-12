@@ -78,6 +78,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
     similar_papers = parsed.get("similar_papers", []) if isinstance(parsed, dict) else []
     assessment = parsed.get("assessment", "") if isinstance(parsed, dict) else ""
     contributions = parsed.get("key_contributions_verified", []) if isinstance(parsed, dict) else []
+    evaluation_reasoning = parsed.get("evaluation_reasoning", "") if isinstance(parsed, dict) else ""
 
     findings = []
     if similar_papers:
@@ -102,7 +103,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         usage=TokenUsage(),
         duration_s=round(time.perf_counter() - t0, 2),
         status=AgentStatus.COMPLETED,
-        raw_output=str({"novelty_index": novelty_str, "similar_papers": similar_papers, "contributions": contributions}),
+        raw_output=str({"novelty_index": novelty_str, "similar_papers": similar_papers, "contributions": contributions, "evaluation_reasoning": evaluation_reasoning}),
     )
 
     await insert_agent_result(pool, paper_id, result)

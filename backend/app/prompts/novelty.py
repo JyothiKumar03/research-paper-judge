@@ -10,6 +10,7 @@ NOVELTY_SYSTEM = (
     "- Compare the paper's contributions against existing literature."
     "- Be conservative when claiming novelty."
     "- If similar papers already exist, treat the contribution as incremental or derivative."
+    "Write a thorough evaluation_reasoning that details what prior work was found, how each contribution compares, and why the novelty_index was assigned."
 
     "Return ONLY valid JSON following the provided schema. "
     "Do not include explanations outside the JSON."
@@ -44,7 +45,8 @@ Return ONLY this JSON:
   "assessment": "<2-3 sentence explanation of novelty>",
   "key_contributions_verified": [
     "<contribution> — <novel / incremental / already exists>"
-  ]
+  ],
+  "evaluation_reasoning": "<in-depth narrative: list every similar paper found and how it overlaps with this paper's contributions, explain each contribution and whether it is genuinely new or already covered in prior work, justify the assigned novelty_index with specific references to the search results.>"
 }}
 
 Novelty levels:

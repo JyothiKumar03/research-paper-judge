@@ -58,6 +58,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
                         "page_no": page["page_num"],
                         "mistakes": int(parsed.get("total_no_of_mistakes", 0)),
                         "sequences": parsed.get("mistakes_start_sequence", []),
+                        "evaluation_reasoning": parsed.get("evaluation_reasoning", ""),
                         "tokens": resp.usage.total_tokens,
                     }
                 log.warning("grammar_agent: bad response page=%d", page["page_num"])
@@ -75,6 +76,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
     total_mistakes = sum(r["mistakes"] for r in page_results)
     all_sequences = [seq for r in page_results for seq in r["sequences"]]
     total_tokens = sum(r["tokens"] for r in page_results)
+    page_reasonings = {r["page_no"]: r["evaluation_reasoning"] for r in page_results if r.get("evaluation_reasoning")}
     score = max(0.0, 100.0 - min(100.0, total_mistakes * 2.0))
 
     findings = [
@@ -95,7 +97,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         usage=TokenUsage(total_tokens=total_tokens),
         duration_s=round(time.perf_counter() - t0, 2),
         status=AgentStatus.COMPLETED,
-        raw_output=str({"total_mistakes": total_mistakes, "sequences": all_sequences[:50]}),
+        raw_output=str({"total_mistakes": total_mistakes, "sequences": all_sequences[:50], "evaluation_reasoning": page_reasonings}),
     )
 
     await insert_agent_result(pool, paper_id, result)

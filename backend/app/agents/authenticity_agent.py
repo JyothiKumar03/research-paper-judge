@@ -62,6 +62,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         parsed = parse_llm_json(resp.content, fallback={})
         red_flags = parsed.get("red_flags", []) if isinstance(parsed, dict) else []
         overall_risk_str = parsed.get("overall_risk", "NONE") if isinstance(parsed, dict) else "NONE"
+        evaluation_reasoning = parsed.get("evaluation_reasoning", "") if isinstance(parsed, dict) else ""
     except LLMExhaustedError:
         log.error("authenticity_agent: all models exhausted for paper=%s", paper_id)
         result = AgentResult(
@@ -116,7 +117,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         usage=TokenUsage(total_tokens=resp.usage.total_tokens),
         duration_s=round(time.perf_counter() - t0, 2),
         status=AgentStatus.COMPLETED,
-        raw_output=str({"overall_risk": overall_risk_str, "red_flags": red_flags}),
+        raw_output=str({"overall_risk": overall_risk_str, "red_flags": red_flags, "evaluation_reasoning": evaluation_reasoning}),
     )
 
     await insert_agent_result(pool, paper_id, result)

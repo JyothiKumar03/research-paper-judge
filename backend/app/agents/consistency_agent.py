@@ -51,6 +51,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         )
         parsed = parse_llm_json(resp.content, fallback={})
         issues = parsed.get("issues", []) if isinstance(parsed, dict) else []
+        evaluation_reasoning = parsed.get("evaluation_reasoning", "") if isinstance(parsed, dict) else ""
     except LLMExhaustedError:
         log.error("consistency_agent: all models exhausted for paper=%s", paper_id)
         result = AgentResult(
@@ -99,7 +100,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         usage=TokenUsage(total_tokens=resp.usage.total_tokens),
         duration_s=round(time.perf_counter() - t0, 2),
         status=AgentStatus.COMPLETED,
-        raw_output=str(issues),
+        raw_output=str({"issues": issues, "evaluation_reasoning": evaluation_reasoning}),
     )
 
     await insert_agent_result(pool, paper_id, result)

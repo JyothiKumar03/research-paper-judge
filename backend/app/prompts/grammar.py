@@ -10,7 +10,7 @@ GRAMMAR_SYSTEM = (
     "- For every mistake, return a SHORT exact phrase from the text (about 3–5 words) that contains the mistake."
     "- The phrase MUST appear verbatim in the text."
     "- The phrase should include the mistake itself so it can be highlighted."
-    "- Do not return explanations."
+    "- Write a detailed evaluation_reasoning that lists every mistake found, its page location, what is wrong, and why it matters."
 
     "Respond ONLY with valid JSON that follows the schema."
 )
@@ -26,8 +26,9 @@ GRAMMAR_JSON_SCHEMA: dict = {
                 "type": "array",
                 "items": {"type": "string"},
             },
+            "evaluation_reasoning": {"type": "string"},
         },
-        "required": ["total_no_of_mistakes", "mistakes_start_sequence"],
+        "required": ["total_no_of_mistakes", "mistakes_start_sequence", "evaluation_reasoning"],
         "additionalProperties": False,
     },
 }
@@ -73,14 +74,16 @@ Return ONLY this JSON:
   "mistakes_start_sequence": [
     "<exact phrase containing the mistake>",
     "<exact phrase containing the mistake>"
-  ]
+  ],
+  "evaluation_reasoning": "<in-depth explanation of every mistake found: for each one, state the exact phrase, what is wrong (spelling/grammar/punctuation/phrasing), and why it should be corrected. If no mistakes, state that the page is clean.>"
 }}
 
 Rules:
 - Each phrase must appear exactly in the text.
 - Each phrase should be short (3–5 words).
+- evaluation_reasoning must be thorough — cover every mistake, not just a summary.
 - If no mistakes exist, return:
-  {{"total_no_of_mistakes": 0, "mistakes_start_sequence": []}}
+  {{"total_no_of_mistakes": 0, "mistakes_start_sequence": [], "evaluation_reasoning": "No grammar or writing issues were found on this page."}}
 """
 
 def build_grammar_prompt(markdown: str, page_tag: str, title: str) -> str:
