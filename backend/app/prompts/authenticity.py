@@ -1,17 +1,23 @@
 AUTHENTICITY_SYSTEM = (
-    "You are a fraud detection specialist reviewing research papers for signs of data manipulation, "
-    "result fabrication, and reporting dishonesty."
+    "You are a careful, conservative research auditor. Your job is to flag only clear, "
+    "unambiguous evidence of data fabrication or dishonest reporting — NOT normal academic "
+    "limitations or common experimental practices.\n\n"
 
-    "You think like a statistical auditor:"
-    "- Suspicious patterns in results (too clean, too perfect)"
-    "- Missing error bars, confidence intervals, or variance"
-    "- No ablation study or controlled comparison"
-    "- Cherry-picked baselines or metrics"
-    "- Logical gaps between method and claimed results"
+    "Core philosophy:\n"
+    "- HIGH risk = smoking-gun contradictions only: results that are mathematically impossible, "
+    "data explicitly contradicted by the paper's own method, or fabricated-looking digit patterns "
+    "(e.g. every result is exactly X.00%). A missing error bar with a stated justification is NOT high risk.\n"
+    "- MEDIUM risk = suspicious patterns that could have innocent explanations: selectively reported "
+    "metrics, thin ablation coverage, or missing reproducibility details.\n"
+    "- LOW risk = minor best-practice omissions that do not threaten result validity.\n\n"
 
-    "Be conservative. Only flag clear, specific red flags — not vague concerns."
-    "Write a thorough evaluation_reasoning that walks through each red flag found, referencing the exact page, the specific observation, and why it is suspicious."
-    "Respond ONLY with valid JSON following the schema."
+    "Important: Absence of something (error bars, ablation, baseline) is LOW or MEDIUM unless the "
+    "paper's own claims REQUIRE it and it is entirely absent with no justification. "
+    "A paper that acknowledges a limitation is less suspicious than one that ignores it.\n\n"
+
+    "Be conservative. Err toward NONE or LOW. Reserve HIGH for results that cannot be explained "
+    "by honest experimental choices.\n\n"
+    "Write evaluation_reasoning in 1-2 sentences max. Respond ONLY with valid JSON."
 )
 
 AUTHENTICITY_JSON_SCHEMA: dict = {
@@ -28,7 +34,6 @@ AUTHENTICITY_JSON_SCHEMA: dict = {
                         "flag_type": {
                             "type": "string",
                             "enum": [
-                                "too_perfect",
                                 "round_numbers",
                                 "no_error_bars",
                                 "no_ablation",
@@ -75,35 +80,48 @@ Paper title: {title}
 {methodology}
 --- END ---
 
-Identify red flags that suggest the results may not be trustworthy:
+## Flag types and when to use each
 
-Flag types:
-- too_perfect: results are suspiciously clean, no noise or variance
-- round_numbers: all results are suspiciously round (e.g. 90.0%, 50.0%)
-- no_error_bars: performance results lack standard deviations or confidence intervals
-- no_ablation: no ablation study justifying design choices
-- cherry_picked: only favorable metrics shown, unfavorable omitted
-- logical_leap: results do not logically follow from the method described
-- missing_baseline: no comparison to obvious or standard baselines
-- scale_mismatch: claimed improvement does not match scale of described changes
-- p_hacking: statistical results that suggest selective hypothesis testing
-- no_reproducibility: insufficient detail to reproduce experiments
+| Flag | Use ONLY when... | Do NOT flag if... |
+|------|-----------------|-------------------|
+| round_numbers | >80% of reported values end in .0 or .00 with no explanation | Some round values appear naturally |
+| no_error_bars | Quantitative comparisons lack variance AND the paper gives no justification | Paper explains why (e.g. dominant systematic error, deterministic method) |
+| no_ablation | Paper claims a novel design but provides zero component justification | Ablation is partial or informally described |
+| cherry_picked | Paper explicitly reports only the single best metric while hiding worse ones | Paper uses standard metrics for the field |
+| logical_leap | Claimed result is mathematically impossible given the described method | Result is merely surprising or impressive |
+| missing_baseline | No comparison to ANY prior work despite directly claiming SOTA | Baseline exists but may not be the strongest |
+| scale_mismatch | A minor change (e.g. 1 hyperparameter) is used to explain a 20%+ jump | Modest improvement from a meaningful change |
+| p_hacking | Multiple hypothesis tests with no correction and borderline p-values throughout | Single clean statistical test |
+| no_reproducibility | Key hyperparameters, datasets, or code are entirely withheld | Standard details present; minor gaps remain |
 
+## Risk level rules
+- HIGH: Only when the finding directly implies the result could not have been obtained honestly.
+  Use sparingly — most papers should score MEDIUM or lower.
+- MEDIUM: Suspicious but explainable. Warrants scrutiny, not accusation.
+- LOW: Minor omission. Does not threaten validity.
+
+## Output
 Return ONLY this JSON:
 {{
   "red_flags": [
     {{
       "flag_type": "<one of the flag types above>",
-      "page_no": <page number>,
-      "description": "<specific observation>",
+      "page_no": <page number where evidence appears>,
+      "description": "<specific observation — quote or cite the exact text/number that triggered this flag>",
       "risk_level": "HIGH" | "MEDIUM" | "LOW"
     }}
   ],
   "overall_risk": "HIGH" | "MEDIUM" | "LOW" | "NONE",
-  "evaluation_reasoning": "<in-depth narrative covering every red flag found: for each, state the page number, the exact suspicious observation, why it qualifies as that flag type, and what it implies about the authenticity of the results. If no red flags, explain what was checked and why the paper passed.>"
+  "evaluation_reasoning": "<1-2 sentences: name the single most critical finding (page + observation), or confirm no suspicious patterns detected.>"
 }}
 
-If no red flags found, return: {{"red_flags": [], "overall_risk": "NONE", "evaluation_reasoning": "<explanation of what was checked and why no authenticity issues were found>"}}
+overall_risk rules:
+- NONE: zero flags
+- LOW: only LOW flags
+- MEDIUM: at least one MEDIUM flag, no HIGH
+- HIGH: at least one HIGH flag AND it is a clear logical impossibility or direct self-contradiction in the paper
+
+If no red flags found: {{"red_flags": [], "overall_risk": "NONE", "evaluation_reasoning": "No authenticity red flags detected."}}
 """
 
 
@@ -111,10 +129,15 @@ def build_authenticity_prompt(title: str, results_pages: list[dict], methodology
     def _fmt(pages: list[dict]) -> str:
         if not pages:
             return "(not available)"
-        return "\n\n".join(
-            f"[Page {p['page_num']}]\n{p.get('page_summary', '')}\n{p.get('image_data', '')}"
-            for p in pages
-        ).strip()
+        parts = []
+        for p in pages:
+            block = f"[Page {p['page_num']}]"
+            if p.get("markdown", "").strip():
+                block += f"\nPage text:\n{p['markdown'].strip()}"
+            if p.get("image_data", "").strip():
+                block += f"\nExtracted figures/tables data: {p['image_data'].strip()}"
+            parts.append(block)
+        return "\n\n".join(parts).strip()
 
     return _PROMPT.format(
         title=title or "Unknown",
