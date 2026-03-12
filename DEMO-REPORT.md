@@ -259,15 +259,26 @@ The paper 'Robust PDF Document Conversion Using Recurrent Neural Networks' propo
 
 ### 4. Fact Check Log
 
-**Score:** 85.0/100
+**Score:** 70.0/100
 
-| Type | Page | Error Description | Verdict |
-|------|------|-------------------|---------|
-| mismatch | page 6 | Page 1 claims the model achieved a "weighted average F1 score of 97% across 17 distinct structural labels". However, Pag | ❌ FALSE |
+**Verified Claims:**
+
+| Page | Claim |
+|------|-------|
+| ✅ Abstract | The model achieves a weighted average F1 score of 97% across 17 distinct structural labels — confirmed by the results table (Model-4, stacked, no decoder: 0.97 weighted F1). |
+| ✅ Datasets | The dataset comprises 2,940 annotated PDF pages covering 7 different publishing layouts (e.g. Elsevier, Physical Review), labeled with 17 categories — consistent across abstract, datasets section, and Figure 2. |
+| ✅ Introduction | The approach is deployed in production on IBM's Corpus Conversion Service (CCS), previously presented at KDD 2018 (Staar et al., arXiv:1806.02284). |
+
+**Unverified / Erroneous Claims:**
+
+| Type | Page | Description |
+|------|------|-------------|
+| ❌ false_claim | Feature Engineering | States "the final accuracy of 0.85 for model-4 was satisfactory" without clearly marking this as an intermediate result (geometric features only). The same Model-4 reaches 0.97 F1 after full feature engineering — readers can easily misread 0.85 as the final performance. |
+| ❌ false_claim | Abstract / Intro | Claims the approach can distinguish "10–20 labels" compared to "1–5 with visual methods", but the actual experiments only evaluate on exactly 17 labels — the stated range is not grounded in the paper's own evaluation. |
 
 **Evaluation Reasoning:**
 
-The primary factual error identified is a mismatch in the reported performance metrics for the model. On Page 1, the paper makes a strong claim that "The model achieved a weighted average F1 score of 97% across 17 distinct structural labels". This sets a high expectation for the model's performance. Page 4 further clarifies that "F1 average weighted by support" is the chosen evaluation metric to account for label imbalance and rank models. However, on Page 6, when discussing a specific and seemingly successful model variant, "Model-4", it is stated that this model "achieved an average F1 score increase of 30 percentage points and faster time-to-solution, with a final accuracy of 0.85 using indexed raw features." If the term "accuracy" on Page 6 is used interchangeably with the primary "weighted average F1 score" (which is a common practice in some contexts, especially when discussing the main performance metric), then a 'final accuracy' of 0.85 (85%) directly contradicts the headline claim of 0.97 (97%) F1 score. Even if 'accuracy' refers to a different metric, the significant discrepancy between the overall F1 claim and the reported 'accuracy' for a key model without further explanation constitutes a factual inconsistency in the paper's performance reporting. This creates confusion regarding the true performance of the system being presented.
+Two factual issues were identified. The 0.85 accuracy for Model-4 is presented without clearly stating it is an intermediate result before feature augmentation, risking confusion with the headline 97% F1. The "10–20 labels" range cited in the abstract is unanchored — the paper only demonstrates results for 17 labels.
 
 ---
 
