@@ -4,6 +4,18 @@ A multi-agent AI system that autonomously evaluates arXiv research papers and ge
 
 ---
 
+## Demo
+
+▶️ **[Watch Video Demo](https://drive.google.com/file/d/1lu8YG0A_j5mfvUIXV27iSNc1RnbYVzdy/view?usp=sharing)**
+
+### Architecture
+
+![Architecture Overview](static/architecture-1.jpg)
+
+![Agent Pipeline](static/architecture-2.jpg)
+
+---
+
 ## What it does
 
 Submit any arXiv URL. The system will:
