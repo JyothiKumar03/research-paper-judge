@@ -222,18 +222,22 @@ DEFAULT_SCORE:  float = 50.0
 
 class ModelID(StrEnum):
     # --- Native Gemini API (google/* prefix routes to Gemini API directly) ---
-    GEMINI_25_FLASH = "google/gemini-2.5-flash"
-    GEMINI_20_FLASH = "google/gemini-2.0-flash"
+    GEMINI_25_FLASH      = "google/gemini-2.5-flash"      
+    GEMINI_25_FLASH_LITE = "google/gemini-2.5-flash-lite"  
 
     # --- OpenRouter free models (vision-capable) ---
-    XIAOMI_MIMO_FLASH = "xiaomi/mimo-v2-flash:free"
-    LLAMA4_SCOUT      = "meta-llama/llama-4-scout:free"
+    QWEN3_VL_235B    = "qwen/qwen3-vl-235b-a22b-thinking"        
+    QWEN3_VL_30B     = "qwen/qwen3-vl-30b-a3b-thinking"         
+    GEMMA3_27B       = "google/gemma-3-27b-it:free"             
+    NEMOTRON_12B_VL  = "nvidia/nemotron-nano-12b-v2-vl:free"  
 
     # --- OpenRouter free models (text-only) ---
-    STEPFUN_FLASH   = "stepfun/step-3.5-flash:free"
-    GLM_4_5_AIR     = "z-ai/glm-4.5-air:free"
-    ARCEE_TRINITY   = "arcee-ai/arcee-trinity-large-preview:free"
-    GPT_OSS_120B    = "openai/gpt-oss-120b:free"
+    QWEN3_NEXT_80B   = "qwen/qwen3-next-80b-a3b-instruct:free"
+    GPT_OSS_120B     = "openai/gpt-oss-120b:free"
+    GLM_45_AIR       = "z-ai/glm-4.5-air:free"
+    STEPFUN_FLASH    = "stepfun/step-3.5-flash:free"
+    ARCEE_TRINITY    = "arcee-ai/trinity-large-preview:free"
+    MISTRAL_SMALL    = "mistralai/mistral-small-3.1-24b-instruct:free"
     OPENROUTER_AUTO = "openrouter/auto"
 
 
@@ -249,15 +253,54 @@ class TaskType(StrEnum):
 
 
 TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
-    # Gemini first (native API, fast) → free fallbacks
-    TaskType.PAGE_TAG_VISION:   [ModelID.GEMINI_25_FLASH, ModelID.XIAOMI_MIMO_FLASH, ModelID.LLAMA4_SCOUT],
-    TaskType.PAGE_TAG_TEXT:     [ModelID.GEMINI_25_FLASH, ModelID.STEPFUN_FLASH,     ModelID.GLM_4_5_AIR],
-    TaskType.GRAMMAR:           [ModelID.GEMINI_25_FLASH, ModelID.ARCEE_TRINITY,     ModelID.STEPFUN_FLASH],
-    TaskType.NOVELTY:           [ModelID.GEMINI_25_FLASH, ModelID.GPT_OSS_120B,      ModelID.STEPFUN_FLASH],
-    TaskType.FACTCHECK:         [ModelID.GEMINI_25_FLASH, ModelID.GPT_OSS_120B,      ModelID.STEPFUN_FLASH],
-    TaskType.CONSISTENCY:       [ModelID.GEMINI_25_FLASH, ModelID.GLM_4_5_AIR,       ModelID.STEPFUN_FLASH],
-    TaskType.AUTHENTICITY:      [ModelID.GEMINI_25_FLASH, ModelID.STEPFUN_FLASH,     ModelID.GLM_4_5_AIR],
-    TaskType.EXECUTIVE_SUMMARY: [ModelID.GEMINI_25_FLASH, ModelID.GEMINI_20_FLASH,   ModelID.STEPFUN_FLASH],
+    TaskType.PAGE_TAG_VISION: [
+        ModelID.GEMINI_25_FLASH,
+        ModelID.QWEN3_VL_235B,
+        ModelID.GEMMA3_27B,
+        ModelID.NEMOTRON_12B_VL,
+    ],
+    TaskType.PAGE_TAG_TEXT: [
+        ModelID.GEMINI_25_FLASH,
+        ModelID.QWEN3_NEXT_80B,
+        ModelID.STEPFUN_FLASH,
+        ModelID.GLM_45_AIR,
+    ],
+    TaskType.GRAMMAR: [
+        ModelID.GEMINI_25_FLASH_LITE,
+        ModelID.STEPFUN_FLASH,
+        ModelID.ARCEE_TRINITY,
+        ModelID.MISTRAL_SMALL,
+    ],
+    TaskType.NOVELTY: [
+        ModelID.GEMINI_25_FLASH,
+        ModelID.GPT_OSS_120B,
+        ModelID.QWEN3_NEXT_80B,
+        ModelID.GLM_45_AIR,
+    ],
+    TaskType.FACTCHECK: [
+        ModelID.GEMINI_25_FLASH,
+        ModelID.GPT_OSS_120B,
+        ModelID.QWEN3_NEXT_80B,
+        ModelID.STEPFUN_FLASH,
+    ],
+    TaskType.CONSISTENCY: [
+        ModelID.GEMINI_25_FLASH,
+        ModelID.GLM_45_AIR,
+        ModelID.QWEN3_NEXT_80B,
+        ModelID.GPT_OSS_120B,
+    ],
+    TaskType.AUTHENTICITY: [
+        ModelID.GEMINI_25_FLASH,
+        ModelID.STEPFUN_FLASH,
+        ModelID.GLM_45_AIR,
+        ModelID.QWEN3_NEXT_80B,
+    ],
+    TaskType.EXECUTIVE_SUMMARY: [
+        ModelID.GEMINI_25_FLASH,
+        ModelID.GEMINI_25_FLASH_LITE,
+        ModelID.ARCEE_TRINITY,
+        ModelID.OPENROUTER_AUTO,
+    ],
 }
 
 TOKEN_BUDGET_TOTAL:    int   = 16_000
@@ -267,4 +310,4 @@ AGENT_TIMEOUT_S:       int   = 120
 
 OPENROUTER_BASE_URL:   str   = "https://openrouter.ai/api/v1/chat/completions"
 ARXIV_API_BASE:        str   = "https://export.arxiv.org/api/query"
-SEMANTIC_SCHOLAR_API:  str   = "https://api.semanticscholar.org/graph/v1"
+# SEMANTIC_SCHOLAR_API:  str   = "https://api.semanticscholar.org/graph/v1"
