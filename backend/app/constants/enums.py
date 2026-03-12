@@ -222,18 +222,15 @@ DEFAULT_SCORE:  float = 50.0
 
 class ModelID(StrEnum):
     # --- Native Gemini API (google/* prefix routes to Gemini API directly) ---
-    GEMINI_25_FLASH      = "google/gemini-2.5-flash"      
-    GEMINI_25_FLASH_LITE = "google/gemini-2.5-flash-lite"  
+    # GEMINI_25_FLASH = "google/gemini-3-flash-preview"
+    GEMINI_25_FLASH = "google/gemini-2.5-flash"
 
     # --- OpenRouter free models (vision-capable) ---
-    QWEN3_VL_235B    = "qwen/qwen3-vl-235b-a22b-thinking"        
-    QWEN3_VL_30B     = "qwen/qwen3-vl-30b-a3b-thinking"         
-    GEMMA3_27B       = "google/gemma-3-27b-it:free"             
-    NEMOTRON_12B_VL  = "nvidia/nemotron-nano-12b-v2-vl:free"  
+    QWEN3_VL_30B     = "qwen/qwen3-vl-30b-a3b-thinking"
+    NEMOTRON_12B_VL  = "nvidia/nemotron-nano-12b-v2-vl:free"
 
     # --- OpenRouter free models (text-only) ---
     QWEN3_NEXT_80B   = "qwen/qwen3-next-80b-a3b-instruct:free"
-    GPT_OSS_120B     = "openai/gpt-oss-120b:free"
     GLM_45_AIR       = "z-ai/glm-4.5-air:free"
     STEPFUN_FLASH    = "stepfun/step-3.5-flash:free"
     ARCEE_TRINITY    = "arcee-ai/trinity-large-preview:free"
@@ -252,11 +249,16 @@ class TaskType(StrEnum):
     EXECUTIVE_SUMMARY = "executive_summary"
 
 
+# Models that do NOT support json_schema response_format.
+# They accept json_object (valid JSON, no schema enforcement) or text.
+NO_SCHEMA_MODELS: frozenset[str] = frozenset({
+    ModelID.STEPFUN_FLASH,
+})
+
 TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
     TaskType.PAGE_TAG_VISION: [
         ModelID.GEMINI_25_FLASH,
-        ModelID.QWEN3_VL_235B,
-        ModelID.GEMMA3_27B,
+        ModelID.QWEN3_VL_30B,
         ModelID.NEMOTRON_12B_VL,
     ],
     TaskType.PAGE_TAG_TEXT: [
@@ -266,20 +268,18 @@ TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
         ModelID.GLM_45_AIR,
     ],
     TaskType.GRAMMAR: [
-        ModelID.GEMINI_25_FLASH_LITE,
+        ModelID.GEMINI_25_FLASH,
         ModelID.STEPFUN_FLASH,
         ModelID.ARCEE_TRINITY,
         ModelID.MISTRAL_SMALL,
     ],
     TaskType.NOVELTY: [
         ModelID.GEMINI_25_FLASH,
-        ModelID.GPT_OSS_120B,
         ModelID.QWEN3_NEXT_80B,
         ModelID.GLM_45_AIR,
     ],
     TaskType.FACTCHECK: [
         ModelID.GEMINI_25_FLASH,
-        ModelID.GPT_OSS_120B,
         ModelID.QWEN3_NEXT_80B,
         ModelID.STEPFUN_FLASH,
     ],
@@ -287,7 +287,6 @@ TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
         ModelID.GEMINI_25_FLASH,
         ModelID.GLM_45_AIR,
         ModelID.QWEN3_NEXT_80B,
-        ModelID.GPT_OSS_120B,
     ],
     TaskType.AUTHENTICITY: [
         ModelID.GEMINI_25_FLASH,
@@ -297,7 +296,6 @@ TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
     ],
     TaskType.EXECUTIVE_SUMMARY: [
         ModelID.GEMINI_25_FLASH,
-        ModelID.GEMINI_25_FLASH_LITE,
         ModelID.ARCEE_TRINITY,
         ModelID.OPENROUTER_AUTO,
     ],
