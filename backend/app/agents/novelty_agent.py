@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import httpx
@@ -15,7 +16,7 @@ log = get_logger(__name__)
 
 _GEMINI_GENERATE_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.5-flash:generateContent"
+    "gemini-3-flash-preview:generateContent"
 )
 
 _INTRO_TAGS = {"ABSTRACT", "INTRODUCTION", "RELATED_WORK", "CONCLUSION"}
@@ -48,6 +49,8 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         title=paper["title"],
         abstract=paper["abstract"],
         intro=intro_text,
+        paper_url=paper.get("pdf_url", ""),
+        publish_date=paper.get("submitted_date", ""),
     )
 
     try:
@@ -114,6 +117,10 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
     return result
 
 
+_GROUNDING_RETRIES = 5
+_GROUNDING_BACKOFF_S = 5  # fixed 5s between every retry
+
+
 async def _call_gemini_with_grounding(prompt: str) -> str:
     if not settings.gemini_api_key:
         raise ValueError("GEMINI_API_KEY is not set")
@@ -121,7 +128,7 @@ async def _call_gemini_with_grounding(prompt: str) -> str:
     payload = {
         "system_instruction": {"parts": [{"text": NOVELTY_SYSTEM}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "tools": [{"googleSearch": {}}],
+        "tools": [{"google_search": {}}],
         "generationConfig": {"temperature": 0.2, "maxOutputTokens": 5000},
     }
 
@@ -130,9 +137,24 @@ async def _call_gemini_with_grounding(prompt: str) -> str:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=90.0) as client:
-        response = await client.post(_GEMINI_GENERATE_URL, json=payload, headers=headers)
-        response.raise_for_status()
+    last_exc: Exception = RuntimeError("no attempts made")
+    for attempt in range(1, _GROUNDING_RETRIES + 1):
+        try:
+            log.debug("_call_gemini_with_grounding: attempt=%d/%d", attempt, _GROUNDING_RETRIES)
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                response = await client.post(_GEMINI_GENERATE_URL, json=payload, headers=headers)
+                response.raise_for_status()
+            data = response.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
+            last_exc = exc
+            delay = _GROUNDING_BACKOFF_S
+            status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+            log.warning(
+                "_call_gemini_with_grounding: attempt=%d failed (status=%s) — %s | retrying in %.0fs",
+                attempt, status, exc, delay,
+            )
+            if attempt < _GROUNDING_RETRIES:
+                await asyncio.sleep(delay)
 
-    data = response.json()
-    return data["candidates"][0]["content"]["parts"][0]["text"]
+    raise last_exc

@@ -23,28 +23,28 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
     title = paper["title"] if paper else ""
     pages = await get_pages_by_paper(pool, paper_id)
 
-    # Collect (page_no, summary) for pages that have a meaningful summary
-    summaries = [
-        (p["page_num"], p["page_summary"])
+    # Collect (page_no, summary, image_data) for evaluable pages
+    page_data = [
+        (p["page_num"], p.get("page_summary", ""), p.get("image_data", ""))
         for p in pages
         if p.get("page_tag") not in _SKIP_TAGS
-        and p.get("page_summary", "").strip()
+        and (p.get("page_summary", "").strip() or p.get("image_data", "").strip())
     ]
 
-    if not summaries:
-        log.warning("factcheck_agent: no page summaries for paper=%s", paper_id)
+    if not page_data:
+        log.warning("factcheck_agent: no page content for paper=%s", paper_id)
         result = AgentResult(
             agent_name=AgentName.FACTCHECK,
             score=50.0,
             status=AgentStatus.SKIPPED,
-            error_msg="No page summaries available",
+            error_msg="No page summaries or image data available",
             duration_s=round(time.perf_counter() - t0, 2),
         )
         await insert_agent_result(pool, paper_id, result)
         return result
 
     models = build_model_chain(TaskType.FACTCHECK)
-    prompt = build_factcheck_prompt(title, summaries)
+    prompt = build_factcheck_prompt(title, page_data)
 
     try:
         resp = await call_llm(

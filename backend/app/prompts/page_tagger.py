@@ -66,6 +66,7 @@ Tag rules:
 - Include exact numeric values, units, dataset names, metrics and hyperparameters when present.
 - "image_data": for pages with figures/tables, extract all table headers, all rows and numeric cells, axis labels and ranges for plots, legend entries and notable data points or trends, and equations/variable relationships. If there are no visuals, set image_data to "".
 - For vision prompts, use both the provided markdown and the image to extract information. For text-only prompts do not invent image data — image_data must be "".
+- IF THERE ARE TABLES, OR TABULAR DATA, ALWAYS RETURN THEM IN A STRUCTURED MARKDOWN FORMAT!!!
 - If uncertain about tag choose "OTHER". Do not invent authors/affiliations unless clearly present in the text.
 - The JSON must not contain additional keys and must be parseable by strict JSON validators.
   If the page has no tables or figures, set image_data to "".

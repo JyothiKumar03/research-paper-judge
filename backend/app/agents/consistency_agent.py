@@ -12,8 +12,7 @@ from app.utils.logger import get_logger
 
 log = get_logger(__name__)
 
-_METHODOLOGY_TAGS = {"METHODOLOGY", "EXPERIMENTS", "BACKGROUND"}
-_RESULTS_TAGS = {"RESULTS", "DISCUSSION"}
+_SKIP_TAGS = {"REFERENCES", "ACKNOWLEDGMENTS", "TITLE"}
 
 _SEVERITY_PENALTY = {"HIGH": 20, "MEDIUM": 10, "LOW": 5}
 _SEVERITY_MAP = {"HIGH": FindingSeverity.HIGH, "MEDIUM": FindingSeverity.MEDIUM, "LOW": FindingSeverity.LOW}
@@ -27,23 +26,27 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
     title = paper["title"] if paper else ""
     pages = await get_pages_by_paper(pool, paper_id)
 
-    methodology_pages = [p for p in pages if p.get("page_tag") in _METHODOLOGY_TAGS]
-    results_pages = [p for p in pages if p.get("page_tag") in _RESULTS_TAGS]
+    # Send all pages except boilerplate — no tag filtering
+    all_pages = [
+        p for p in pages
+        if p.get("page_tag") not in _SKIP_TAGS
+        and (p.get("page_summary", "").strip() or p.get("image_data", "").strip() or p.get("markdown", "").strip())
+    ]
 
-    if not methodology_pages and not results_pages:
-        log.warning("consistency_agent: no methodology/results pages for paper=%s", paper_id)
+    if not all_pages:
+        log.warning("consistency_agent: no content pages for paper=%s", paper_id)
         result = AgentResult(
             agent_name=AgentName.CONSISTENCY,
             score=50.0,
             status=AgentStatus.SKIPPED,
-            error_msg="No methodology or results pages found",
+            error_msg="No content pages found",
             duration_s=round(time.perf_counter() - t0, 2),
         )
         await insert_agent_result(pool, paper_id, result)
         return result
 
     models = build_model_chain(TaskType.CONSISTENCY)
-    prompt = build_consistency_prompt(title, methodology_pages, results_pages)
+    prompt = build_consistency_prompt(title, all_pages)
 
     try:
         resp = await call_llm(

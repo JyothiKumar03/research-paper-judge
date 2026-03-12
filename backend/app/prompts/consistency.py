@@ -1,14 +1,50 @@
 CONSISTENCY_SYSTEM = (
-    "You are a rigorous peer reviewer performing an internal consistency audit of a research paper. "
-    "You compare claims, numbers, and methodology descriptions across sections to detect contradictions."
+    "You are a rigorous peer reviewer performing an internal consistency audit of a "
+    "research paper. Your job is to detect genuine contradictions between different "
+    "sections — claims that cannot both be true simultaneously.\n\n"
 
-    "Rules:"
-    "- Only flag contradictions you are confident about."
-    "- Do not flag vague or ambiguous statements."
-    "- Cross-reference specific claims from different pages."
-    "Write a thorough evaluation_reasoning that covers every inconsistency found, referencing the exact pages involved and explaining the contradiction in detail."
+    "WHAT COUNTS AS A REAL INCONSISTENCY:\n"
+    "- A specific number stated in prose (abstract, intro, conclusion) that directly "
+    "contradicts the same number in a results table or another prose section\n"
+    "- A dataset size, split ratio, or label count claimed differently in two separate "
+    "prose statements\n"
+    "- A methodology described in one section that is structurally incompatible with "
+    "how it is described in another section\n"
+    "- A conclusion that claims X when the results clearly show not-X\n\n"
+
+    "WHAT IS NOT AN INCONSISTENCY — never flag these:\n"
+    "- Different rows in an ablation table or architecture search table showing "
+    "different performance numbers. These are intentional comparisons.\n"
+    "- An intermediate result (e.g. a baseline or early model in a search) that is "
+    "lower than the final result. Papers deliberately show this progression.\n"
+    "- A number visible in a figure/plot that differs from a prose count, UNLESS "
+    "the paper explicitly claims the figure defines that count.\n"
+    "- A performance difference the paper's own text already explains. "
+    "If the paper reconciles it, it is not a contradiction.\n"
+    "- Minor wording differences that do not change meaning\n\n"
+
+    "BEFORE FLAGGING ANYTHING:\n"
+    "Read the surrounding context of both conflicting statements. If the paper itself "
+    "explains the difference anywhere in the text, do NOT flag it.\n\n"
+
+    "HIGH SEVERITY RULE — only mark HIGH if ALL three are true:\n"
+    "1. You can quote the exact conflicting text from BOTH pages verbatim.\n"
+    "2. The conflict involves a core claim (final result, central methodology, "
+    "primary dataset size) — not a footnote, intermediate step, or minor detail.\n"
+    "3. There is NO explanation anywhere in the paper for the difference.\n"
+    "If you cannot satisfy all three, use MEDIUM or LOW.\n\n"
+
+    "SEVERITY CALIBRATION:\n"
+    "HIGH: Abstract claims weighted F1 of 97%, Results table final row shows 84%, "
+    "no explanation given anywhere.\n"
+    "MEDIUM: Dataset section says 2,940 pages, experiment section says 3,695 pages, "
+    "no explanation.\n"
+    "LOW: Introduction says 'more than 10 labels', methodology says exactly 17 — "
+    "directionally consistent, minor precision difference.\n\n"
+
     "Respond ONLY with valid JSON following the schema."
 )
+
 
 CONSISTENCY_JSON_SCHEMA: dict = {
     "name": "consistency_result",
@@ -47,55 +83,65 @@ You are performing an internal consistency audit of a research paper.
 
 Paper title: {title}
 
-Your job is to detect contradictions or inconsistencies between different sections/pages of this paper.
+Your job is to detect genuine contradictions between different pages.
+A contradiction means two statements that cannot both be true simultaneously,
+where the paper does not itself explain the difference.
 
-Look for:
-- Same metric reported with different values on different pages
-- Methodology described differently in different sections
-- Dataset sizes or splits that differ across pages
-- Claims in the introduction that are not supported or contradicted by results
-- Figures, tables, or numbers that conflict with surrounding text
+=== GROUND RULES ===
 
---- METHODOLOGY PAGES ---
-{methodology}
---- END ---
+1. PROSE OVER PLOTS: Prose numbers are authoritative. Only flag figure-based
+   counts if they directly contradict a prose claim with no explanation.
 
---- RESULTS PAGES ---
-{results}
---- END ---
+2. ABLATION / SEARCH TABLES ARE NOT CONTRADICTIONS: Different rows in the
+   same table showing different scores are intentional — do NOT flag them.
+
+3. CHECK CONTEXT BEFORE FLAGGING: If the paper explains the difference
+   anywhere (different config, metric, split, intermediate result), skip it.
+
+4. HIGH SEVERITY requires ALL THREE:
+   - You can quote the exact conflicting text from both pages verbatim
+   - The conflict involves a core claim (final result, primary method, main dataset)
+   - No explanation exists anywhere in the paper
+   If you cannot satisfy all three, use MEDIUM or LOW.
+
+=== PAPER CONTENT (page by page) ===
+
+{pages}
+
+=== END OF PAPER ===
 
 Return ONLY this JSON:
 {{
   "issues": [
     {{
-      "page_nos": [<page numbers involved>],
-      "description": "<what is inconsistent and how>",
+      "page_nos": [<both page numbers involved>],
+      "description": "<verbatim quote from page A> vs <verbatim quote from page B> — explain why they conflict and confirm no author explanation exists>",
       "severity": "HIGH" | "MEDIUM" | "LOW"
     }}
   ],
-  "evaluation_reasoning": "<in-depth narrative covering every inconsistency found: for each, reference the exact pages, quote or paraphrase the conflicting claims, and explain why they contradict each other. If no issues found, explain what cross-references were checked and why they are consistent.>"
+  "evaluation_reasoning": "<narrative: what you cross-checked, what you found, why each flagged issue is a genuine unresolved contradiction. If none, explain what was checked.>"
 }}
 
-Severity:
-- HIGH: directly contradicts a core result or claim
-- MEDIUM: inconsistency that affects interpretation
-- LOW: minor wording or formatting inconsistency
-
-If no inconsistencies found, return: {{"issues": [], "evaluation_reasoning": "<explanation of what was cross-checked and why the paper is internally consistent>"}}
+If no inconsistencies found:
+{{"issues": [], "evaluation_reasoning": "<what was checked and why the paper is consistent>"}}
 """
 
 
-def build_consistency_prompt(title: str, methodology_pages: list[dict], results_pages: list[dict]) -> str:
-    def _fmt(pages: list[dict]) -> str:
-        if not pages:
-            return "(not available)"
-        return "\n\n".join(
-            f"[Page {p['page_num']}]\n{p.get('page_summary', '')}\n{p.get('image_data', '')}"
-            for p in pages
-        ).strip()
+def build_consistency_prompt(title: str, pages: list[dict]) -> str:
+    if not pages:
+        pages_text = "(no content available)"
+    else:
+        parts = []
+        for p in pages:
+            block = f"[Page {p['page_num']} | Section: {p.get('page_tag', 'UNKNOWN')}]"
+            if p.get("page_summary", "").strip():
+                block += f"\nSummary: {p['page_summary'].strip()}"
+            if p.get("image_data", "").strip():
+                block += f"\nFigures/tables data: {p['image_data'].strip()}"
+            parts.append(block)
+        pages_text = "\n\n".join(parts)
 
     return _PROMPT.format(
         title=title or "Unknown",
-        methodology=_fmt(methodology_pages),
-        results=_fmt(results_pages),
+        pages=pages_text,
     )

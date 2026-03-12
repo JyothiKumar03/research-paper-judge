@@ -89,7 +89,7 @@ DO NOT report:
 - Opinions
 - Writing style issues
 
---- PAGE SUMMARIES ---
+--- PAGE DATA ---
 {summaries}
 --- END ---
 
@@ -112,8 +112,13 @@ Rules:
 - Be conservative — only report clear mistakes.
 """
 
-def build_factcheck_prompt(title: str, page_summaries: list[tuple[int, str]]) -> str:
-    summary_block = "\n\n".join(
-        f"[Page {page_no}]\n{summary}" for page_no, summary in page_summaries
-    )
-    return _PROMPT.format(title=title or "Unknown", summaries=summary_block)
+def build_factcheck_prompt(title: str, page_data: list[tuple[int, str, str]]) -> str:
+    parts = []
+    for page_no, summary, image_data in page_data:
+        block = f"[Page {page_no}]"
+        if summary.strip():
+            block += f"\nSummary: {summary.strip()}"
+        if image_data.strip():
+            block += f"\nExtracted figures/tables data: {image_data.strip()}"
+        parts.append(block)
+    return _PROMPT.format(title=title or "Unknown", summaries="\n\n".join(parts))
