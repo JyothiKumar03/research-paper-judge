@@ -257,9 +257,9 @@ NO_SCHEMA_MODELS: frozenset[str] = frozenset({
 
 TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
     TaskType.PAGE_TAG_VISION: [
-        ModelID.GEMINI_25_FLASH,
         ModelID.QWEN3_VL_30B,
         ModelID.NEMOTRON_12B_VL,
+        ModelID.GEMINI_25_FLASH,
     ],
     TaskType.PAGE_TAG_TEXT: [
         ModelID.GEMINI_25_FLASH,

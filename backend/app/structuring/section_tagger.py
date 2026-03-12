@@ -18,7 +18,7 @@ from app.utils.logger import get_logger
 
 log = get_logger(__name__)
 
-_CONCURRENCY = 6
+_CONCURRENCY = 3
 
 
 async def tag_page(page: PageData) -> PageData:
