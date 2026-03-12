@@ -6,7 +6,7 @@ A multi-agent AI system that autonomously evaluates arXiv research papers and ge
 
 ## Demo
 
-▶️ **[Watch Video Demo](https://drive.google.com/file/d/1lu8YG0A_j5mfvUIXV27iSNc1RnbYVzdy/view?usp=sharing)**
+▶️ **[Watch Video Demo](https://drive.google.com/file/d/1dt_lkpLGC8xuOiPXMTQmw29nHSRQ2OEt/view?usp=sharing)**
 
 ### Architecture
 
