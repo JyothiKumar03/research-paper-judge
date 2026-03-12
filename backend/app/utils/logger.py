@@ -12,10 +12,11 @@ if sys.platform == "win32":
     except AttributeError:
         pass
 
-_LOG_DIR  = Path("logs")
-_LOG_FILE = _LOG_DIR / "app.log"
-_FILE_FMT = "%(asctime)s  %(levelname)-8s  %(name)s — %(message)s"
-_DATE_FMT = "%Y-%m-%d %H:%M:%S"
+_LOG_DIR      = Path("logs")
+_PAPERS_DIR   = _LOG_DIR / "papers"
+_LOG_FILE     = _LOG_DIR / "app.log"
+_FILE_FMT     = "%(asctime)s  %(levelname)-8s  %(name)s — %(message)s"
+_DATE_FMT     = "%Y-%m-%d %H:%M:%S"
 
 
 def _setup_root() -> None:
@@ -56,3 +57,30 @@ def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.propagate = True
     return logger
+
+
+def add_paper_log_handler(paper_id: str) -> logging.FileHandler:
+    """
+    Attach a dedicated file handler to the root 'app' logger that writes
+    all log records for this evaluation run to logs/papers/{paper_id}.log.
+
+    Returns the handler so the caller can remove it when the run is done.
+    """
+    _PAPERS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = _PAPERS_DIR / f"{paper_id}.log"
+
+    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter(_FILE_FMT, datefmt=_DATE_FMT))
+
+    root = logging.getLogger("app")
+    root.addHandler(fh)
+    return fh
+
+
+def remove_paper_log_handler(handler: logging.FileHandler) -> None:
+    """Flush, close, and detach the per-paper handler from the root logger."""
+    root = logging.getLogger("app")
+    root.removeHandler(handler)
+    handler.flush()
+    handler.close()

@@ -13,7 +13,7 @@ from app.extraction.pdf_downloader import download_pdf
 from app.extraction.pdf_extractor import extract_pages
 from app.structuring.section_tagger import tag_all_pages
 from app.types import PaperMetadata, PaperRecord
-from app.utils.logger import get_logger
+from app.utils.logger import add_paper_log_handler, get_logger, remove_paper_log_handler
 
 log = get_logger(__name__)
 
@@ -73,11 +73,14 @@ async def evaluate_paper(body: EvaluateRequest, request: Request):
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"PDF download failed: {exc}")
 
+    paper_id = str(uuid.uuid4())
+    paper_log_handler = add_paper_log_handler(paper_id)
+    log.info("evaluate_paper: started arxiv_id=%s paper_id=%s", arxiv_id, paper_id)
+
     try:
         pages = extract_pages(pdf_path, arxiv_id)
         log.info("evaluate_paper: extracted %d pages for %s", len(pages), arxiv_id)
 
-        paper_id = str(uuid.uuid4())
         paper = PaperRecord(
             id=paper_id,
             arxiv_id=arxiv_id,
@@ -119,6 +122,7 @@ async def evaluate_paper(body: EvaluateRequest, request: Request):
         raise HTTPException(status_code=500, detail=f"Pipeline error: {exc}")
     finally:
         pdf_path.unlink(missing_ok=True)
+        remove_paper_log_handler(paper_log_handler)
 
 
 @router.post("/run-eval/{paper_id}", response_model=RunEvalResponse)
