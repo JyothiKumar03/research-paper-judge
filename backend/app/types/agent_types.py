@@ -8,7 +8,7 @@ from app.constants import AgentName, AgentStatus, FindingSeverity, ModelID
 class ModelConfig(BaseModel):
     model: ModelID
     temperature: float = 0.2
-    max_tokens: int = 4_096
+    max_tokens: int = 10_000
     retries: int = 3
 
 
