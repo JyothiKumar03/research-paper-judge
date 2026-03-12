@@ -9,6 +9,7 @@ from app.config import settings
 from app.constants import (
     BACKOFF_BASE_S,
     MAX_RETRIES_PER_MODEL,
+    NO_SCHEMA_MODELS,
     OPENROUTER_BASE_URL,
     TASK_MODEL_CHAIN,
     TaskType,
@@ -42,7 +43,7 @@ async def call_llm(
     models: list[ModelConfig],
     system: str = "",
     vision_images: Optional[list[bytes]] = None,
-    response_max_tokens: int = 4_096,
+    response_max_tokens: int = 10_000,
     json_schema: Optional[dict] = None,
 ) -> LLMResponse:
     if not models:
@@ -172,10 +173,15 @@ def _build_payload(
     }
 
     if json_schema:
-        payload["response_format"] = {
-            "type": "json_schema",
-            "json_schema": json_schema,
-        }
+        if model in NO_SCHEMA_MODELS:
+            # Model rejects json_schema — fall back to json_object (valid JSON, no schema enforcement)
+            log.debug("_build_payload: model=%s does not support json_schema, using json_object", model)
+            payload["response_format"] = {"type": "json_object"}
+        else:
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": json_schema,
+            }
 
     return payload
 
@@ -195,7 +201,19 @@ async def _post_openrouter(payload: dict) -> LLMResponse:
         response = await client.post(OPENROUTER_BASE_URL, json=payload, headers=headers)
         response.raise_for_status()
 
-    return _parse_response(response.json(), payload["model"])
+    data = response.json()
+
+    # OpenRouter can return HTTP 200 with an error payload instead of raising a status error
+    if "error" in data:
+        err = data["error"]
+        msg = err.get("message") or str(err)
+        log.warning(
+            "_post_openrouter: 200 response with error for model=%s — %s",
+            payload["model"], str(msg)[:400],
+        )
+        raise ValueError(f"200-error from OpenRouter: {str(msg)[:400]}")
+
+    return _parse_response(data, payload["model"])
 
 
 async def _post_gemini(payload: dict) -> LLMResponse:
@@ -211,13 +229,29 @@ async def _post_gemini(payload: dict) -> LLMResponse:
         response = await client.post(_GEMINI_BASE_URL, json=payload, headers=headers)
         response.raise_for_status()
 
-    return _parse_response(response.json(), payload["model"])
+    data = response.json()
+
+    # Gemini can return HTTP 200 with an error object in the body
+    if "error" in data:
+        err = data["error"]
+        msg = err.get("message") or str(err)
+        log.warning(
+            "_post_gemini: 200 response with error for model=%s — %s",
+            payload["model"], str(msg)[:400],
+        )
+        raise ValueError(f"200-error from Gemini: {str(msg)[:400]}")
+
+    return _parse_response(data, payload["model"])
 
 
 def _parse_response(data: dict, fallback_model: str) -> LLMResponse:
+    choices = data.get("choices")
+    if not choices:
+        log.warning("_parse_response: no 'choices' in response for model=%s — body: %s", fallback_model, str(data)[:300])
+        raise ValueError(f"_parse_response: missing 'choices' in response: {str(data)[:300]}")
     usage_raw = data.get("usage", {})
     return LLMResponse(
-        content=data["choices"][0]["message"]["content"] or "",
+        content=choices[0]["message"]["content"] or "",
         usage=TokenUsage(
             prompt_tokens=usage_raw.get("prompt_tokens", 0),
             completion_tokens=usage_raw.get("completion_tokens", 0),
