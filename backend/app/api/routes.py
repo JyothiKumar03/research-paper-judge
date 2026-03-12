@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException, Request
 
 from app.agents import run_all_agents
@@ -64,8 +66,10 @@ async def evaluate_paper(body: EvaluateRequest, request: Request):
         pages = extract_pages(pdf_path, arxiv_id)
         log.info("evaluate_paper: extracted %d pages for %s", len(pages), arxiv_id)
 
+        paper_id = str(uuid.uuid4())
         paper = PaperRecord(
-            id=arxiv_id,
+            id=paper_id,
+            arxiv_id=arxiv_id,
             title=metadata.title,
             authors=metadata.authors,
             abstract=metadata.abstract,
@@ -75,16 +79,17 @@ async def evaluate_paper(body: EvaluateRequest, request: Request):
             extraction_path=ExtractionPath.PDF,
         )
         await insert_paper(pool, paper)
-        log.info("evaluate_paper: paper row inserted for %s", arxiv_id)
+        log.info("evaluate_paper: paper row inserted id=%s arxiv_id=%s", paper_id, arxiv_id)
 
-        tagged_pages = await tag_all_pages(pool, arxiv_id, pages)
-        log.info("evaluate_paper: %d pages tagged for %s", len(tagged_pages), arxiv_id)
+        tagged_pages = await tag_all_pages(pool, paper_id, pages)
+        log.info("evaluate_paper: %d pages tagged for %s", len(tagged_pages), paper_id)
 
-        agent_items, report = await _run_eval(pool, arxiv_id)
-        log.info("evaluate_paper: all agents complete for %s", arxiv_id)
+        agent_items, report = await _run_eval(pool, paper_id)
+        log.info("evaluate_paper: all agents complete for %s", paper_id)
 
         return EvaluateResponse(
-            paper_id=arxiv_id,
+            paper_id=paper_id,
+            arxiv_id=arxiv_id,
             title=metadata.title,
             authors=metadata.authors,
             abstract=metadata.abstract,

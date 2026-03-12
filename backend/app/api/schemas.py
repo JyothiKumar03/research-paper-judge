@@ -21,7 +21,8 @@ class RunEvalResponse(BaseModel):
 
 
 class EvaluateResponse(BaseModel):
-    paper_id: str
+    paper_id: str   # UUID — unique per submission
+    arxiv_id: str   # canonical arXiv ID
     title: str
     authors: list[str]
     abstract: str

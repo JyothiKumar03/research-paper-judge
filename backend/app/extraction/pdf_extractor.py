@@ -65,7 +65,7 @@ def extract_pages(
     try:
         for chunk in chunks:
             meta = chunk.get("metadata", {})
-            page_num = meta.get("page", len(pages)) + 1  # 0-indexed -> 1-indexed
+            page_num = meta.get("page", len(pages) + 1)  # pymupdf4llm returns 1-indexed page numbers
             tables = len(chunk.get("tables", []))
             images = len(chunk.get("images", []))
             has_screenshot = False

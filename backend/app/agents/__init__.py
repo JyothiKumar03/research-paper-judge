@@ -53,7 +53,7 @@ async def run_all_agents(pool: asyncpg.Pool, paper_id: str) -> dict[str, AgentRe
 
     log.info("run_all_agents: launching evaluator for paper=%s", paper_id)
     try:
-        eval_summary = await evaluator_agent.run(pool, paper_id, merged)
+        eval_summary = await evaluator_agent.run(pool, paper_id)
         log.info(
             "run_all_agents: evaluator done paper=%s overall=%.1f verdict=%s",
             paper_id, eval_summary["overall_score"], eval_summary["verdict"],

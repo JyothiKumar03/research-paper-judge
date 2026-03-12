@@ -7,6 +7,7 @@ log = get_logger(__name__)
 _CREATE_PAPERS = """
 CREATE TABLE IF NOT EXISTS papers (
     id              TEXT PRIMARY KEY,
+    arxiv_id        TEXT        NOT NULL,
     title           TEXT        NOT NULL,
     authors         TEXT        NOT NULL,
     abstract        TEXT        NOT NULL,
@@ -112,6 +113,18 @@ _MIGRATIONS = [
             WHERE table_name='pages' AND column_name='image_data'
         ) THEN
             ALTER TABLE pages ADD COLUMN image_data TEXT NOT NULL DEFAULT '';
+        END IF;
+    END $$;
+    """,
+    # add arxiv_id column to papers (backfill with id value for old rows)
+    """
+    DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='papers' AND column_name='arxiv_id'
+        ) THEN
+            ALTER TABLE papers ADD COLUMN arxiv_id TEXT NOT NULL DEFAULT '';
+            UPDATE papers SET arxiv_id = id WHERE arxiv_id = '';
         END IF;
     END $$;
     """,

@@ -12,10 +12,9 @@ from app.constants import (
     TaskType,
     Verdict,
 )
-from app.db import get_paper, insert_report
+from app.db import get_agent_results, get_paper, insert_report
 from app.prompts.evaluator import EVALUATOR_JSON_SCHEMA, EVALUATOR_SYSTEM, build_evaluator_prompt
 from app.services.llm_service import LLMExhaustedError, build_model_chain, call_llm
-from app.types import AgentResult
 from app.utils.json_parser import parse_llm_json
 from app.utils.logger import get_logger
 
@@ -31,10 +30,12 @@ _NOVELTY_LABEL: dict[str, str] = {
 _GRAMMAR_RATING = lambda score: "HIGH" if score >= 80 else ("MEDIUM" if score >= 50 else "LOW")
 
 
+_TOKEN_LIMIT = 16_000
+
+
 async def run(
     pool: asyncpg.Pool,
     paper_id: str,
-    agent_results: dict[AgentName, AgentResult],
 ) -> dict:
     t0 = time.perf_counter()
     log.info("evaluator_agent: start paper=%s", paper_id)
@@ -42,19 +43,22 @@ async def run(
     paper = await get_paper(pool, paper_id)
     title = paper["title"] if paper else ""
 
-    # Parse each agent's raw_output string back to a dict
+    # Fetch agent results from DB (source of truth, not in-memory props)
+    db_rows = await get_agent_results(pool, paper_id)
+
     agent_data: dict = {}
-    for name, result in agent_results.items():
+    for row in db_rows:
+        name = AgentName(row["agent_name"])
         raw: dict = {}
         try:
-            if result.raw_output:
-                raw = ast.literal_eval(result.raw_output)
+            if row["raw_output"]:
+                raw = ast.literal_eval(row["raw_output"])
         except Exception:
             pass
         agent_data[name] = {
-            "score": result.score if result.score is not None else 50.0,
-            "status": result.status.value,
-            "findings": [f.model_dump() for f in result.findings],
+            "score": row["score"] if row["score"] is not None else 50.0,
+            "status": row["status"],
+            "findings": row["findings"],  # already parsed by get_agent_results
             "evaluation_reasoning": raw.get("evaluation_reasoning", ""),
             "raw": raw,
         }
@@ -84,8 +88,19 @@ async def run(
     # LLM call for verdict, executive summary, and detailed reasoning
     models = build_model_chain(TaskType.EXECUTIVE_SUMMARY)
     prompt = build_evaluator_prompt(
-        title, agent_data, overall_score, grammar_rating, novelty_label, fabrication_risk_pct
+        title, agent_data, overall_score, grammar_rating, novelty_label, fabrication_risk_pct,
+        include_grammar_sequences=True,
     )
+    # Rough token estimate: ~4 chars per token. If over limit, strip grammar sequences.
+    if len(prompt) // 4 > _TOKEN_LIMIT:
+        log.warning(
+            "evaluator_agent: prompt ~%d tokens exceeds %d limit, stripping grammar sequences for paper=%s",
+            len(prompt) // 4, _TOKEN_LIMIT, paper_id,
+        )
+        prompt = build_evaluator_prompt(
+            title, agent_data, overall_score, grammar_rating, novelty_label, fabrication_risk_pct,
+            include_grammar_sequences=False,
+        )
 
     executive_summary = ""
     novelty_assessment = ""

@@ -36,7 +36,8 @@ class SectionData(BaseModel):
 
 
 class PaperRecord(BaseModel):
-    id: str
+    id: str        # UUID generated at ingestion time
+    arxiv_id: str  # canonical arXiv ID (e.g. "1706.03762")
     title: str
     authors: list[str]
     abstract: str

@@ -11,22 +11,15 @@ log = get_logger(__name__)
 
 
 async def insert_paper(pool: asyncpg.Pool, paper: PaperRecord) -> None:
-    log.debug("insert_paper: %s", paper.id)
+    log.debug("insert_paper: id=%s arxiv_id=%s", paper.id, paper.arxiv_id)
     async with pool.acquire() as conn:
         await conn.execute(
             """
-            INSERT INTO papers (id, title, authors, abstract, submitted_date, pdf_url, page_count, extraction_path)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            ON CONFLICT (id) DO UPDATE SET
-                title           = EXCLUDED.title,
-                authors         = EXCLUDED.authors,
-                abstract        = EXCLUDED.abstract,
-                submitted_date  = EXCLUDED.submitted_date,
-                pdf_url         = EXCLUDED.pdf_url,
-                page_count      = EXCLUDED.page_count,
-                extraction_path = EXCLUDED.extraction_path
+            INSERT INTO papers (id, arxiv_id, title, authors, abstract, submitted_date, pdf_url, page_count, extraction_path)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             """,
             paper.id,
+            paper.arxiv_id,
             paper.title,
             json.dumps(paper.authors),
             paper.abstract,
