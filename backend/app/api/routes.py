@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
@@ -11,7 +12,7 @@ from app.extraction.arxiv_meta import extract_arxiv_id, fetch_metadata
 from app.extraction.pdf_downloader import download_pdf
 from app.extraction.pdf_extractor import extract_pages
 from app.structuring.section_tagger import tag_all_pages
-from app.types import PaperRecord
+from app.types import PaperMetadata, PaperRecord
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -52,10 +53,20 @@ async def evaluate_paper(body: EvaluateRequest, request: Request):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+    _FALLBACK = "FAILED TO FETCH METADATA"
     try:
         metadata = await fetch_metadata(arxiv_id)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"arXiv API error: {exc}")
+        log.warning("evaluate_paper: metadata fetch failed for %s — %s, continuing with fallback", arxiv_id, exc)
+        metadata = PaperMetadata(
+            arxiv_id=arxiv_id,
+            title=_FALLBACK,
+            authors=[_FALLBACK],
+            abstract=_FALLBACK,
+            submitted_date=_FALLBACK,
+            categories=["unknown"],
+            pdf_url=f"https://arxiv.org/pdf/{arxiv_id}",
+        )
 
     try:
         pdf_path = await download_pdf(arxiv_id)
@@ -151,6 +162,28 @@ async def evaluation_status(paper_id: str, request: Request):
             for r in agent_rows
         ],
     }
+
+
+@router.get("/paper/{paper_id}")
+async def get_paper_endpoint(paper_id: str, request: Request):
+    """Return paper metadata (title, arxiv_id, authors, etc.)."""
+    pool = request.app.state.pool
+    paper = await get_paper(pool, paper_id)
+    if paper is None:
+        raise HTTPException(status_code=404, detail=f"Paper {paper_id!r} not found")
+    paper["authors"] = json.loads(paper["authors"]) if isinstance(paper["authors"], str) else paper["authors"]
+    return paper
+
+
+@router.get("/agents/{paper_id}")
+async def get_agents_endpoint(paper_id: str, request: Request):
+    """Return full agent results (score, findings, reasoning) for a paper."""
+    pool = request.app.state.pool
+    paper = await get_paper(pool, paper_id)
+    if paper is None:
+        raise HTTPException(status_code=404, detail=f"Paper {paper_id!r} not found")
+    agent_rows = await get_agent_results(pool, paper_id)
+    return {"paper_id": paper_id, "agents": agent_rows}
 
 
 @router.get("/report/{paper_id}")
