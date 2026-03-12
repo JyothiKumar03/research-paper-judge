@@ -13,7 +13,7 @@ FACTCHECK_SYSTEM = (
     "- Do NOT flag stylistic issues, vague statements, or missing citations."
     "- Do NOT speculate about the author's intent."
     "- If information is incomplete but not provably wrong, ignore it."
-    "Write a thorough evaluation_reasoning that walks through every error found: reference the exact page, quote the incorrect claim, explain what is wrong and what the correct information is."
+    "Write a concise evaluation_reasoning in 1-2 sentences max: state only the most critical error found (page + claim) or confirm no errors were found. No lengthy walk-throughs."
 
     "Your output MUST be strictly valid JSON that follows the provided schema."
     "Do not include explanations outside the JSON."
@@ -103,11 +103,11 @@ Return ONLY this JSON structure:
       "error_description": "<clear explanation of the incorrect or contradictory claim>"
     }}
   ],
-  "evaluation_reasoning": "<in-depth narrative covering every error found: for each, state the page number, quote or paraphrase the incorrect claim, explain what is factually wrong or what it contradicts, and cite the correct information where possible. If no errors found, explain what claims were verified and why they passed.>"
+  "evaluation_reasoning": "<1-2 sentences max: state the most critical error found (page + claim) or confirm no factual errors were detected.>"
 }}
 
 Rules:
-- If no clear errors are found, return: {{"errors": [], "evaluation_reasoning": "<explanation of what was verified and why no factual errors were found>"}}
+- If no clear errors are found, return: {{"errors": [], "evaluation_reasoning": "No factual errors detected."}}
 - Do not invent errors.
 - Be conservative — only report clear mistakes.
 """

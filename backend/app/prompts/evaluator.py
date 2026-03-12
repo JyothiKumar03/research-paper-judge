@@ -67,7 +67,7 @@ def build_evaluator_prompt(
     def _section(agent_key: str, label: str, strip_sequences: bool = False) -> str:
         d = agent_data.get(agent_key, {})
         score = d.get("score", 50.0)
-        reasoning = d.get("evaluation_reasoning", "") or "(no reasoning available)"
+        reasoning = d.get("evaluation_reasoning", "") or "NO DATA FROM THIS AGENT"
         findings = d.get("findings", [])
         finding_lines_parts = []
         for f in findings[:10]:
@@ -76,7 +76,7 @@ def build_evaluator_prompt(
                 # keep only the part before the sequence list, e.g. "5 mistake(s)"
                 desc = desc[: desc.index(":")].strip()
             finding_lines_parts.append(f"  - [{f['severity']}] {desc} ({f['location']})")
-        finding_lines = "\n".join(finding_lines_parts) or "  (none)"
+        finding_lines = "\n".join(finding_lines_parts) or "  NO DATA FROM THIS AGENT"
         return (
             f"### {label}\n"
             f"Score: {score}/100\n"
@@ -116,9 +116,9 @@ Total Mistakes: {total_mistakes}
 
 {_section(AgentName.NOVELTY, "Novelty Agent")}
 Similar Papers Found: {len(similar_papers)}
-{chr(10).join(f"  - {p}" for p in similar_papers[:5]) or "  (none)"}
+{chr(10).join(f"  - {p}" for p in similar_papers[:5]) or "  NO DATA FROM THIS AGENT"}
 Contributions Verified:
-{chr(10).join(f"  - {c}" for c in contributions[:5]) or "  (none)"}
+{chr(10).join(f"  - {c}" for c in contributions[:5]) or "  NO DATA FROM THIS AGENT"}
 
 ---
 
@@ -133,7 +133,7 @@ Contributions Verified:
 {_section(AgentName.AUTHENTICITY, "Authenticity Agent")}
 Overall Risk: {overall_risk}
 Red Flags: {len(red_flags)}
-{chr(10).join(f"  - [{f.get('risk_level')}] {f.get('flag_type')} on page {f.get('page_no')}: {f.get('description')}" for f in red_flags[:5]) or "  (none)"}
+{chr(10).join(f"  - [{f.get('risk_level')}] {f.get('flag_type')} on page {f.get('page_no')}: {f.get('description')}" for f in red_flags[:5]) or "  NO DATA FROM THIS AGENT"}
 
 ---
 

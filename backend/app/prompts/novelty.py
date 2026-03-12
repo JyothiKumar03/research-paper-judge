@@ -99,7 +99,7 @@ Return ONLY this JSON (no text outside the JSON):
       "reasoning": "<1 sentence: what prior work covers this, if any>"
     }}
   ],
-  "evaluation_reasoning": "<in-depth narrative: for each similar paper found, describe what it does, what it shares with this paper, and what is different. For each contribution, explain whether it is genuinely new or already covered. Explicitly state what you searched for, what you found, and why the assigned novelty_index is justified. Call out any undisclosed prior overlap (works not cited by the authors) as a particular concern.>"
+  "evaluation_reasoning": "<1-2 sentences max: state the novelty verdict and the single most important prior work overlap (or confirm no overlap found).>"
 }}
 """
 

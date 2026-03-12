@@ -119,11 +119,11 @@ Return ONLY this JSON:
       "severity": "HIGH" | "MEDIUM" | "LOW"
     }}
   ],
-  "evaluation_reasoning": "<narrative: what you cross-checked, what you found, why each flagged issue is a genuine unresolved contradiction. If none, explain what was checked.>"
+  "evaluation_reasoning": "<1-2 sentences max: state the key contradiction found (pages + claim) or confirm the paper is internally consistent.>"
 }}
 
 If no inconsistencies found:
-{{"issues": [], "evaluation_reasoning": "<what was checked and why the paper is consistent>"}}
+{{"issues": [], "evaluation_reasoning": "No internal inconsistencies found."}}
 """
 
 

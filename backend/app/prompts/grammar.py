@@ -111,7 +111,7 @@ Return ONLY this JSON:
     "<verbatim phrase from PAGE CONTENT>",
     "<verbatim phrase from PAGE CONTENT>"
   ],
-  "evaluation_reasoning": "<for each mistake: quote the exact phrase as it appears in the text, state what is wrong, and what the correct form is. If no mistakes, confirm page was reviewed and is clean.>"
+  "evaluation_reasoning": "<1-2 sentences max: state the key mistake found (exact phrase + fix) or confirm the page is clean.>"
 }}
 
 If no mistakes found:
