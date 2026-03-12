@@ -1,27 +1,28 @@
 EVALUATOR_SYSTEM = (
-    "You are a chief scientific peer-review panel chair synthesizing the outputs of five specialized AI evaluation agents "
-    "to produce a final, authoritative assessment of a research paper."
+    "You are the chief scientific peer-review panel chair. "
+    "You receive CLEAN, HIGH-QUALITY summaries from five agents. "
+    "Your ONLY job: (1) decide PASS/FAIL first, then (2) write a short, sharp report. "
 
-    "You receive scores, findings, and in-depth evaluation reasoning from:"
-    "- Grammar Agent: writing quality and linguistic correctness"
-    "- Novelty Agent: originality compared to existing literature (via web search)"
-    "- Fact-Check Agent: factual accuracy and internal claim verification"
-    "- Consistency Agent: internal coherence of claims, numbers, and methodology across sections"
-    "- Authenticity Agent: detection of fabricated, manipulated, or dishonestly reported results"
+    "You receive:"
+    "- Grammar Agent (writing quality)"
+    "- Novelty Agent (originality)"
+    "- Fact-Check Agent (factual accuracy)"
+    "- Consistency Agent (internal coherence)"
+    "- Authenticity Agent (fabrication risk)"
 
-    "Your responsibilities:"
-    "1. Issue a final PASS or FAIL verdict based on the combined evidence."
-    "2. Write a sharp, authoritative executive summary that justifies the verdict in plain language."
-    "3. Write a novelty_assessment — 2-3 sentences on the paper's originality and how it stands against prior work."
-    "4. Assign a fabrication_risk_level based on the authenticity agent's findings."
-    "5. Write a comprehensive detailed_reasoning that covers every dimension — do not skip any agent."
+    "Workflow (follow exactly):"
+    "1. Decide verdict immediately using the rules below."
+    "2. Write executive_summary (max 4 sentences)."
+    "3. Write novelty_assessment (exactly 2-3 sentences)."
+    "4. Set fabrication_risk_level."
+    "5. Write detailed_reasoning as ONE short paragraph per agent (max 70 words each), citing only critical issues + page numbers."
 
     "Rules:"
-    "- Base your verdict strictly on the agent evidence provided. Do not invent new findings."
-    "- PASS requires overall_score >= 60 AND no HIGH-severity authenticity red flags."
-    "- FAIL if overall_score < 60 OR any HIGH-severity fabrication/authenticity issue is present."
-    "- Be direct and specific — reference page numbers and exact findings where relevant."
-    "Respond ONLY with valid JSON following the schema."
+    "- Base everything strictly on the provided agent data. Never invent findings."
+    "- PASS = overall_score >= 60 AND no HIGH-severity authenticity red flags."
+    "- FAIL = overall_score < 60 OR any HIGH-severity authenticity issue."
+    "- Be direct, specific, and concise. Reference severity/page only when relevant."
+    "- Output ONLY valid JSON. No extra text."
 )
 
 EVALUATOR_JSON_SCHEMA: dict = {
@@ -61,16 +62,21 @@ def build_evaluator_prompt(
     grammar_rating: str,
     novelty_label: str,
     fabrication_risk_pct: float,
+    include_grammar_sequences: bool = True,
 ) -> str:
-    def _section(agent_key: str, label: str) -> str:
+    def _section(agent_key: str, label: str, strip_sequences: bool = False) -> str:
         d = agent_data.get(agent_key, {})
         score = d.get("score", 50.0)
         reasoning = d.get("evaluation_reasoning", "") or "(no reasoning available)"
         findings = d.get("findings", [])
-        finding_lines = "\n".join(
-            f"  - [{f['severity']}] {f['description']} ({f['location']})"
-            for f in findings[:10]
-        ) or "  (none)"
+        finding_lines_parts = []
+        for f in findings[:10]:
+            desc = f["description"]
+            if strip_sequences and ":" in desc:
+                # keep only the part before the sequence list, e.g. "5 mistake(s)"
+                desc = desc[: desc.index(":")].strip()
+            finding_lines_parts.append(f"  - [{f['severity']}] {desc} ({f['location']})")
+        finding_lines = "\n".join(finding_lines_parts) or "  (none)"
         return (
             f"### {label}\n"
             f"Score: {score}/100\n"
@@ -103,7 +109,7 @@ Fabrication Risk Estimate: {fabrication_risk_pct}%
 
 ---
 
-{_section(AgentName.GRAMMAR, "Grammar Agent")}
+{_section(AgentName.GRAMMAR, "Grammar Agent", strip_sequences=not include_grammar_sequences)}
 Total Mistakes: {total_mistakes}
 
 ---
