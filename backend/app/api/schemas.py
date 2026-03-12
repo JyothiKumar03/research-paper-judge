@@ -16,6 +16,8 @@ class AgentScoreItem(BaseModel):
 class RunEvalResponse(BaseModel):
     paper_id: str
     agents: list[AgentScoreItem]
+    overall_score: float | None = None
+    verdict: str | None = None
 
 
 class EvaluateResponse(BaseModel):
@@ -27,3 +29,5 @@ class EvaluateResponse(BaseModel):
     page_count: int
     tagged_count: int
     agent_scores: dict[str, float | None] = {}
+    overall_score: float | None = None
+    verdict: str | None = None

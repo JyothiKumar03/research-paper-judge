@@ -5,6 +5,7 @@ import asyncpg
 from app.agents import (
     authenticity_agent,
     consistency_agent,
+    evaluator_agent,
     factcheck_agent,
     grammar_agent,
     novelty_agent,
@@ -40,7 +41,7 @@ async def run_fraud_check(pool: asyncpg.Pool, paper_id: str) -> dict[str, AgentR
 
 
 async def run_all_agents(pool: asyncpg.Pool, paper_id: str) -> dict[str, AgentResult]:
-    """Runs both waves in parallel and merges results."""
+    """Runs both waves in parallel, merges results, then runs the evaluator."""
     log.info("run_all_agents: launching both waves for paper=%s", paper_id)
     sanity, fraud = await asyncio.gather(
         run_sanity_check(pool, paper_id),
@@ -48,7 +49,18 @@ async def run_all_agents(pool: asyncpg.Pool, paper_id: str) -> dict[str, AgentRe
     )
     merged = {**sanity, **fraud}
     scores = {k: f"{v.score:.1f}" for k, v in merged.items()}
-    log.info("run_all_agents: done paper=%s scores=%s", paper_id, scores)
+    log.info("run_all_agents: wave agents done paper=%s scores=%s", paper_id, scores)
+
+    log.info("run_all_agents: launching evaluator for paper=%s", paper_id)
+    try:
+        eval_summary = await evaluator_agent.run(pool, paper_id, merged)
+        log.info(
+            "run_all_agents: evaluator done paper=%s overall=%.1f verdict=%s",
+            paper_id, eval_summary["overall_score"], eval_summary["verdict"],
+        )
+    except Exception as exc:
+        log.error("run_all_agents: evaluator failed for paper=%s — %s", paper_id, exc)
+
     return merged
 
 
@@ -83,4 +95,5 @@ __all__ = [
     "novelty_agent",
     "consistency_agent",
     "authenticity_agent",
+    "evaluator_agent",
 ]

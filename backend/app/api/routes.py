@@ -19,10 +19,10 @@ router = APIRouter(prefix="/api/v1", tags=["evaluation"])
 
 _SANITY_AGENTS = {AgentName.GRAMMAR, AgentName.FACTCHECK, AgentName.NOVELTY}
 
-async def _run_eval(pool, paper_id: str) -> list[AgentScoreItem]:
-    """Runs both waves in parallel, returns per-agent summary with wave label."""
+async def _run_eval(pool, paper_id: str) -> tuple[list[AgentScoreItem], dict | None]:
+    """Runs both waves + evaluator, returns per-agent summaries and the final report."""
     agent_results = await run_all_agents(pool, paper_id)
-    return [
+    items = [
         AgentScoreItem(
             name=str(name),
             wave="sanity_check" if name in _SANITY_AGENTS else "fraud_check",
@@ -32,6 +32,8 @@ async def _run_eval(pool, paper_id: str) -> list[AgentScoreItem]:
         )
         for name, res in agent_results.items()
     ]
+    report = await get_report(pool, paper_id)
+    return items, report
 
 
 @router.get("/health")
@@ -78,7 +80,7 @@ async def evaluate_paper(body: EvaluateRequest, request: Request):
         tagged_pages = await tag_all_pages(pool, arxiv_id, pages)
         log.info("evaluate_paper: %d pages tagged for %s", len(tagged_pages), arxiv_id)
 
-        agent_items = await _run_eval(pool, arxiv_id)
+        agent_items, report = await _run_eval(pool, arxiv_id)
         log.info("evaluate_paper: all agents complete for %s", arxiv_id)
 
         return EvaluateResponse(
@@ -90,6 +92,8 @@ async def evaluate_paper(body: EvaluateRequest, request: Request):
             page_count=len(tagged_pages),
             tagged_count=sum(1 for p in tagged_pages if p.page_tag is not None),
             agent_scores={item.name: item.score for item in agent_items},
+            overall_score=report["overall_score"] if report else None,
+            verdict=report["verdict"] if report else None,
         )
 
     except HTTPException:
@@ -111,9 +115,14 @@ async def run_eval(paper_id: str, request: Request):
         raise HTTPException(status_code=404, detail=f"Paper {paper_id!r} not found — ingest it first via /evaluate")
 
     try:
-        agent_items = await _run_eval(pool, paper_id)
+        agent_items, report = await _run_eval(pool, paper_id)
         log.info("run_eval: complete for paper=%s", paper_id)
-        return RunEvalResponse(paper_id=paper_id, agents=agent_items)
+        return RunEvalResponse(
+            paper_id=paper_id,
+            agents=agent_items,
+            overall_score=report["overall_score"] if report else None,
+            verdict=report["verdict"] if report else None,
+        )
     except Exception as exc:
         log.error("run_eval: failed for paper=%s — %s", paper_id, exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Eval error: {exc}")

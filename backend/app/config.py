@@ -10,7 +10,6 @@ class Settings(BaseSettings):
 
     openrouter_api_key: str = ""
     gemini_api_key: str = ""
-    semantic_scholar_api_key: str = ""
 
     # NeonDB connection string — format: postgresql://user:pass@host/dbname?sslmode=require
     database_url: str = ""
