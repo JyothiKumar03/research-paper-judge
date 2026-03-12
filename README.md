@@ -175,7 +175,6 @@ streamlit run app.py
 |----------|----------|---------|-------------|
 | `OPENROUTER_API_KEY` | **Yes** | — | Free key from openrouter.ai |
 | `OPENROUTER_MODEL` | No | `google/gemini-2.0-flash-exp:free` | Primary LLM model |
-| `SEMANTIC_SCHOLAR_API_KEY` | No | — | Optional — increases rate limits |
 | `SQLITE_DB_PATH` | No | `data/research_validator.db` | DB file location |
 | `HOST` | No | `0.0.0.0` | Server host |
 | `PORT` | No | `8000` | Server port |

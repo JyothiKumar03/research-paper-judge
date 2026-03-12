@@ -33,7 +33,6 @@ from .enums import (
     AGENT_TIMEOUT_S,
     OPENROUTER_BASE_URL,
     ARXIV_API_BASE,
-    SEMANTIC_SCHOLAR_API,
 )
 
 __all__ = [
@@ -71,5 +70,4 @@ __all__ = [
     "AGENT_TIMEOUT_S",
     "OPENROUTER_BASE_URL",
     "ARXIV_API_BASE",
-    "SEMANTIC_SCHOLAR_API",
 ]

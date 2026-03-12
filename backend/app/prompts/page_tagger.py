@@ -61,11 +61,13 @@ Tag rules:
 - ACKNOWLEDGMENTS → funding, thanks
 - OTHER → none of the above
 
-page_summary: 3-5 sentences covering key ideas, methods, and claims on this page. It should be captured in such a way that if someone sees it, they should get the whole idea!
-image_data: Read the image carefully. Extract ALL essential data from tables and figures:
-  - Table: column headers, row labels, every numeric cell value
-  - Graph/plot: axis labels, axis ranges, legend entries, key data point values or trends
-  - Equation/diagram: variable names, relationships described
+- "page_summary": produce 3–5 concise, content-first sentences (declarative) describing the concepts, methods, numbers or claims on that page. **Do NOT** use navigation/meta phrases like "this page", "the page", "here", "on this page", "the figure shows", "the authors say". Start sentences with concepts or results (e.g. "The Transformer uses...", "Experiments report...").
+- Keep "page_summary" mergeable with other summaries — write as if it's a paragraph inside a unified paper summary.
+- Include exact numeric values, units, dataset names, metrics and hyperparameters when present.
+- "image_data": for pages with figures/tables, extract all table headers, all rows and numeric cells, axis labels and ranges for plots, legend entries and notable data points or trends, and equations/variable relationships. If there are no visuals, set image_data to "".
+- For vision prompts, use both the provided markdown and the image to extract information. For text-only prompts do not invent image data — image_data must be "".
+- If uncertain about tag choose "OTHER". Do not invent authors/affiliations unless clearly present in the text.
+- The JSON must not contain additional keys and must be parseable by strict JSON validators.
   If the page has no tables or figures, set image_data to "".
 """
 
@@ -105,7 +107,9 @@ Tag rules:
 - ACKNOWLEDGMENTS → funding, thanks
 - OTHER → none of the above
 
-page_summary: 3-5 sentences covering key ideas, formulas, numbers, and claims on this specific page.
+- "page_summary": produce 3–5 concise, content-first sentences (declarative) describing the concepts, methods, numbers or claims on that page. **Do NOT** use navigation/meta phrases like "this page", "the page", "here", "on this page", "the figure shows", "the authors say". Start sentences with concepts or results (e.g. "The Transformer uses...", "Experiments report...").
+- Keep "page_summary" mergeable with other summaries — write as if it's a paragraph inside a unified paper summary.
+- Include exact numeric values, units, dataset names, metrics and hyperparameters when present.
 image_data: always "" for text-only pages.
 """
 
