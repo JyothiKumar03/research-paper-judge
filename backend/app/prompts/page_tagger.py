@@ -61,9 +61,14 @@ Tag rules:
 - ACKNOWLEDGMENTS → funding, thanks
 - OTHER → none of the above
 
-- "page_summary": produce 3–5 concise, content-first sentences (declarative) describing the concepts, methods, numbers or claims on that page. **Do NOT** use navigation/meta phrases like "this page", "the page", "here", "on this page", "the figure shows", "the authors say". Start sentences with concepts or results (e.g. "The Transformer uses...", "Experiments report...").
-- Keep "page_summary" mergeable with other summaries — write as if it's a paragraph inside a unified paper summary.
-- Include exact numeric values, units, dataset names, metrics and hyperparameters when present.
+- "page_summary": produce 3–5 concise, content-first sentences (declarative). **Do NOT** use navigation/meta phrases like "this page", "the page", "here", "the authors say". Start sentences with concepts or results.
+  Prioritise extracting these in order:
+  1. **Key claims, discoveries, findings** — what the paper asserts or proves on this page
+  2. **Approach / methodology** — techniques, architectures, algorithms used
+  3. **Cited numbers, benchmarks, historical values** — exact figures the paper references or compares against (e.g. "BERT achieves 88.5 F1 on SQuAD")
+  4. **Key constants, hyperparameters, formulas** — learning rates, thresholds, loss functions, equations stated in prose or inline math
+  5. **Dataset names, metrics, experimental settings** — include exact values and units
+  Keep "page_summary" mergeable with other summaries — write as if it's a paragraph inside a unified paper summary.
 - "image_data": for pages with figures/tables, extract all table headers, all rows and numeric cells, axis labels and ranges for plots, legend entries and notable data points or trends, and equations/variable relationships. If there are no visuals, set image_data to "".
 - For vision prompts, use both the provided markdown and the image to extract information. For text-only prompts do not invent image data — image_data must be "".
 - IF THERE ARE TABLES, OR TABULAR DATA, ALWAYS RETURN THEM IN A STRUCTURED MARKDOWN FORMAT!!!
@@ -108,10 +113,15 @@ Tag rules:
 - ACKNOWLEDGMENTS → funding, thanks
 - OTHER → none of the above
 
-- "page_summary": produce 3–5 concise, content-first sentences (declarative) describing the concepts, methods, numbers or claims on that page. **Do NOT** use navigation/meta phrases like "this page", "the page", "here", "on this page", "the figure shows", "the authors say". Start sentences with concepts or results (e.g. "The Transformer uses...", "Experiments report...").
-- Keep "page_summary" mergeable with other summaries — write as if it's a paragraph inside a unified paper summary.
-- Include exact numeric values, units, dataset names, metrics and hyperparameters when present.
-image_data: always "" for text-only pages.
+- "page_summary": produce 3–5 concise, content-first sentences (declarative). **Do NOT** use navigation/meta phrases like "this page", "the page", "here", "the authors say". Start sentences with concepts or results.
+  Prioritise extracting these in order:
+  1. **Key claims, discoveries, findings** — what the paper asserts or proves on this page
+  2. **Approach / methodology** — techniques, architectures, algorithms used
+  3. **Cited numbers, benchmarks, historical values** — exact figures the paper references or compares against (e.g. "BERT achieves 88.5 F1 on SQuAD")
+  4. **Key constants, hyperparameters, formulas** — learning rates, thresholds, loss functions, equations stated in prose or inline math
+  5. **Dataset names, metrics, experimental settings** — include exact values and units
+  Keep "page_summary" mergeable with other summaries — write as if it's a paragraph inside a unified paper summary.
+- image_data: always "" for text-only pages.
 """
 
 

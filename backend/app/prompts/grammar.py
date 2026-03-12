@@ -25,17 +25,20 @@ GRAMMAR_SYSTEM = (
     "ERROR TYPES YOU SHOULD FLAG (objective, verifiable):\n"
     "- Clear spelling mistakes in plain English words\n"
     "- Clear subject-verb disagreement in plain prose\n"
-    "- Missing or clearly wrong articles in plain English sentences\n\n"
+    "- Missing or clearly wrong articles in plain English sentences\n"
+    "- Unprofessional / informal language in academic prose: colloquial words (e.g. 'stuff', 'things', "
+    "'a lot of', 'super', 'really', 'pretty good', 'got', 'kind of', 'sort of'), "
+    "slang, or casual phrasing that is inappropriate for a research paper\n\n"
 
     "NEVER FLAG THESE — always skip:\n"
     "- Any phrase containing underscores, brackets around single letters, carets, "
     "or isolated variable names (math/formula extraction artifacts)\n"
     "- Numbers, decimals, scientific notation, table values, or equations\n"
     "- Anything where you are not 100% certain the phrase appears verbatim in the text\n"
-    "- Style or tone choices, slightly awkward but grammatically correct phrasing\n"
     "- Hyphenation, en-dash vs hyphen, citation formatting\n"
     "- Technical jargon standard in the field\n"
-    "- Comma splices, dangling modifiers, or punctuation issues (too ambiguous in academic prose)\n\n"
+    "- Comma splices, dangling modifiers, or punctuation issues (too ambiguous in academic prose)\n"
+    "- Slightly awkward but grammatically correct and professionally toned phrasing\n\n"
 
     "Respond ONLY with valid JSON that follows the schema."
 )
@@ -86,6 +89,7 @@ STEP 2 — FIND REAL ERRORS in plain English prose only:
 - Clear spelling mistakes (e.g. "teh" instead of "the", "recieve" instead of "receive")
 - Clear subject-verb disagreement (e.g. "results shows", "model perform")
 - Missing or wrong articles in plain English sentences
+- Unprofessional / informal language (e.g. "a lot of", "stuff", "things", "super", "really", "pretty good", "got", "kind of", "sort of", slang)
 
 STEP 3 — VERIFY BEFORE REPORTING. For each error you want to report:
 - Find the exact phrase in the PAGE CONTENT above

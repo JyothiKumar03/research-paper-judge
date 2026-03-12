@@ -1,7 +1,7 @@
 FACTCHECK_SYSTEM = (
     "You are an expert scientific fact-checker and peer reviewer specializing in auditing research papers. "
     "You verify claims against established scientific knowledge, mathematical correctness, and internal consistency. "
-    "Your job is NOT to summarize the paper, but to identify factual inaccuracies and contradictions."
+    "Your job is NOT to summarize the paper, but to audit factual claims — identifying which are correct and which are wrong."
 
     "You think like a rigorous journal reviewer (e.g., NeurIPS / IEEE reviewer):"
     "- Carefully verify numerical values, formulas, definitions, and scientific claims."
@@ -10,6 +10,8 @@ FACTCHECK_SYSTEM = (
 
     "Rules you MUST follow:"
     "- Only report errors when you are highly confident they are incorrect."
+    "- Only add a claim to verified_claims when you have actively checked it and confirmed it is correct."
+    "- Do NOT add trivial or obvious statements to verified_claims — only non-trivial checkable facts."
     "- Do NOT flag stylistic issues, vague statements, or missing citations."
     "- Do NOT speculate about the author's intent."
     "- If information is incomplete but not provably wrong, ignore it."
@@ -25,6 +27,18 @@ FACTCHECK_JSON_SCHEMA: dict = {
     "schema": {
         "type": "object",
         "properties": {
+            "verified_claims": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "claim": {"type": "string"},
+                        "page_no": {"type": "integer"},
+                    },
+                    "required": ["claim", "page_no"],
+                    "additionalProperties": False,
+                },
+            },
             "errors": {
                 "type": "array",
                 "items": {
@@ -43,7 +57,7 @@ FACTCHECK_JSON_SCHEMA: dict = {
             },
             "evaluation_reasoning": {"type": "string"},
         },
-        "required": ["errors", "evaluation_reasoning"],
+        "required": ["verified_claims", "errors", "evaluation_reasoning"],
         "additionalProperties": False,
     },
 }
@@ -53,15 +67,16 @@ You are performing a factual audit of a research paper using page-level keypoint
 
 Paper title: {title}
 
-Your task is to identify **clear factual errors or contradictions** in the summaries.
+Your task is to audit factual claims in the paper — identifying which are verified correct and which are wrong.
 
 Follow this evaluation process:
 
 1. Review each page summary carefully.
-2. Check whether claims are scientifically or mathematically correct.
-3. Compare statements across pages to detect contradictions.
-4. Verify that numbers, formulas, and scientific principles are correct.
-5. Only report errors you are highly confident about.
+2. Identify key non-trivial factual claims (numbers, formulas, scientific principles, benchmark values).
+3. For each claim you can actively verify:
+   - If it is correct → add to verified_claims
+   - If it is clearly wrong → add to errors
+4. Skip claims you cannot verify or that are vague/subjective.
 
 Types of errors to detect:
 
@@ -96,6 +111,12 @@ DO NOT report:
 Return ONLY this JSON structure:
 
 {{
+  "verified_claims": [
+    {{
+      "claim": "<a non-trivial factual claim you checked and confirmed correct>",
+      "page_no": <page number>
+    }}
+  ],
   "errors": [
     {{
       "error_type": "mismatch" or "false_claim",
@@ -107,9 +128,10 @@ Return ONLY this JSON structure:
 }}
 
 Rules:
-- If no clear errors are found, return: {{"errors": [], "evaluation_reasoning": "No factual errors detected."}}
-- Do not invent errors.
-- Be conservative — only report clear mistakes.
+- If no clear errors are found, return errors as [].
+- If no claims could be actively verified, return verified_claims as [].
+- Do not invent errors or verified claims.
+- Be conservative — only report clear facts.
 """
 
 def build_factcheck_prompt(title: str, page_data: list[tuple[int, str, str]]) -> str:

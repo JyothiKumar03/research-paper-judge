@@ -131,6 +131,9 @@ async def run(
         verdict = Verdict.PASS if overall_score >= PASS_THRESHOLD else Verdict.FAIL
 
     # Build the markdown report
+    factcheck_raw = agent_data.get(AgentName.FACTCHECK, {}).get("raw", {})
+    factcheck_verified = factcheck_raw.get("verified_claims", [])
+
     markdown = _build_markdown(
         paper_id=paper_id,
         title=title,
@@ -146,6 +149,7 @@ async def run(
         fabrication_risk_pct=fabrication_risk_pct,
         fabrication_risk_level=fabrication_risk_level,
         detailed_reasoning=detailed_reasoning,
+        factcheck_verified=factcheck_verified,
     )
 
     scores_out = {name.value: agent_data.get(name, {}).get("score") for name in AgentName}
@@ -185,6 +189,7 @@ def _build_markdown(
     fabrication_risk_pct: float,
     fabrication_risk_level: str,
     detailed_reasoning: str,
+    factcheck_verified: list,
 ) -> str:
     verdict_icon = "✅" if verdict == Verdict.PASS else "❌"
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -207,6 +212,8 @@ def _build_markdown(
     factcheck_score = agent_data.get(AgentName.FACTCHECK, {}).get("score", 50.0)
     factcheck_findings = agent_data.get(AgentName.FACTCHECK, {}).get("findings", [])
     factcheck_reasoning = agent_data.get(AgentName.FACTCHECK, {}).get("evaluation_reasoning", "")
+    factcheck_raw = agent_data.get(AgentName.FACTCHECK, {}).get("raw", {})
+    factcheck_verified = factcheck_raw.get("verified_claims", [])
 
     auth_score = agent_data.get(AgentName.AUTHENTICITY, {}).get("score", 50.0)
     auth_findings = agent_data.get(AgentName.AUTHENTICITY, {}).get("findings", [])
@@ -314,20 +321,27 @@ def _build_markdown(
         "",
     ]
 
+    if factcheck_verified:
+        lines += ["**Verified Claims:**", ""]
+        for vc in factcheck_verified:
+            page = vc.get("page_no", "?") if isinstance(vc, dict) else "?"
+            claim = vc.get("claim", "") if isinstance(vc, dict) else str(vc)
+            lines.append(f"- ✅ **(page {page})** {claim}")
+        lines.append("")
+
     if factcheck_findings:
+        lines += ["**Unverified / Erroneous Claims:**", ""]
         lines += [
-            "| Type | Page | Error Description | Verdict |",
-            "|------|------|-------------------|---------|",
+            "| Type | Page | Description |",
+            "|------|------|-------------|",
         ]
         for f in factcheck_findings:
             desc = f.get("description", "")[:120]
             location = f.get("location", "")
             category = f.get("category", "")
-            sev = f.get("severity", "HIGH")
-            verdict_cell = "❌ FALSE" if sev == "HIGH" else "⚠️ UNVERIFIED"
-            lines.append(f"| {category} | {location} | {desc} | {verdict_cell} |")
+            lines.append(f"| ❌ {category} | {location} | {desc} |")
         lines.append("")
-    else:
+    elif not factcheck_verified:
         lines += [
             "**Result:** No factual errors detected — all verifiable claims passed inspection.",
             "",
