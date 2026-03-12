@@ -5,19 +5,15 @@ import httpx
 import asyncpg
 
 from app.config import settings
-from app.constants import AgentName, AgentStatus, FindingSeverity, NOVELTY_SCORE_MAP, NoveltyIndex
+from app.constants import AgentName, AgentStatus, FindingSeverity, NOVELTY_SCORE_MAP, NoveltyIndex, TaskType
 from app.db import get_pages_by_paper, get_paper, insert_agent_result
 from app.prompts.novelty import NOVELTY_SYSTEM, build_novelty_prompt
+from app.services.llm_service import build_model_chain, call_llm
 from app.types import AgentResult, Finding, TokenUsage
 from app.utils.json_parser import extract_score, parse_llm_json
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
-
-_GEMINI_GENERATE_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-3-flash-preview:generateContent"
-)
 
 _INTRO_TAGS = {"ABSTRACT", "INTRODUCTION", "RELATED_WORK", "CONCLUSION"}
 
@@ -53,15 +49,29 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         publish_date=paper.get("submitted_date", ""),
     )
 
-    try:
-        raw_text = await _call_gemini_with_grounding(prompt)
-    except Exception as exc:
-        log.error("novelty_agent: Gemini grounding call failed for paper=%s — %s", paper_id, exc)
+    models = build_model_chain(TaskType.NOVELTY)
+    raw_text = None
+
+    for model_cfg in models:
+        try:
+            if model_cfg.model.startswith("google/"):
+                gemini_model = model_cfg.model.removeprefix("google/")
+                raw_text = await _call_gemini_with_grounding(prompt, gemini_model)
+            else:
+                resp = await call_llm(prompt, [model_cfg], system=NOVELTY_SYSTEM)
+                raw_text = resp.content
+            break
+        except Exception as exc:
+            log.warning("novelty_agent: model=%s failed — %s", model_cfg.model, exc)
+            continue
+
+    if raw_text is None:
+        log.error("novelty_agent: all models exhausted for paper=%s", paper_id)
         result = AgentResult(
             agent_name=AgentName.NOVELTY,
             score=50.0,
             status=AgentStatus.FAILED,
-            error_msg=str(exc),
+            error_msg="All models exhausted",
             duration_s=round(time.perf_counter() - t0, 2),
         )
         await insert_agent_result(pool, paper_id, result)
@@ -118,20 +128,20 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
 
 
 _GROUNDING_RETRIES = 5
-_GROUNDING_BACKOFF_S = 5  # fixed 5s between every retry
+_GROUNDING_BACKOFF_S = 5
 
 
-async def _call_gemini_with_grounding(prompt: str) -> str:
+async def _call_gemini_with_grounding(prompt: str, model: str) -> str:
     if not settings.gemini_api_key:
         raise ValueError("GEMINI_API_KEY is not set")
 
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {
         "system_instruction": {"parts": [{"text": NOVELTY_SYSTEM}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "tools": [{"google_search": {}}],
         "generationConfig": {"temperature": 0.2, "maxOutputTokens": 5000},
     }
-
     headers = {
         "x-goog-api-key": settings.gemini_api_key,
         "Content-Type": "application/json",
@@ -140,21 +150,20 @@ async def _call_gemini_with_grounding(prompt: str) -> str:
     last_exc: Exception = RuntimeError("no attempts made")
     for attempt in range(1, _GROUNDING_RETRIES + 1):
         try:
-            log.debug("_call_gemini_with_grounding: attempt=%d/%d", attempt, _GROUNDING_RETRIES)
+            log.debug("_call_gemini_with_grounding: model=%s attempt=%d/%d", model, attempt, _GROUNDING_RETRIES)
             async with httpx.AsyncClient(timeout=90.0) as client:
-                response = await client.post(_GEMINI_GENERATE_URL, json=payload, headers=headers)
+                response = await client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
             data = response.json()
             return data["candidates"][0]["content"]["parts"][0]["text"]
         except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError) as exc:
             last_exc = exc
-            delay = _GROUNDING_BACKOFF_S
             status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
             log.warning(
-                "_call_gemini_with_grounding: attempt=%d failed (status=%s) — %s | retrying in %.0fs",
-                attempt, status, exc, delay,
+                "_call_gemini_with_grounding: model=%s attempt=%d failed (status=%s) — retrying in %ds",
+                model, attempt, status, _GROUNDING_BACKOFF_S,
             )
             if attempt < _GROUNDING_RETRIES:
-                await asyncio.sleep(delay)
+                await asyncio.sleep(_GROUNDING_BACKOFF_S)
 
     raise last_exc

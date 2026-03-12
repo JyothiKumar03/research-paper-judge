@@ -77,7 +77,7 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
     all_sequences = [seq for r in page_results for seq in r["sequences"]]
     total_tokens = sum(r["tokens"] for r in page_results)
     page_reasonings = {r["page_no"]: r["evaluation_reasoning"] for r in page_results if r.get("evaluation_reasoning")}
-    score = max(0.0, 100.0 - min(100.0, total_mistakes * 2.0))
+    score = max(0.0, 100.0 - min(100.0, total_mistakes * 1.0))
 
     findings = [
         Finding(

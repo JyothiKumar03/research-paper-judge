@@ -227,10 +227,12 @@ class ModelID(StrEnum):
 
     # --- OpenRouter free models (vision-capable) ---
     QWEN3_VL_30B     = "qwen/qwen3-vl-30b-a3b-thinking"
+    QWEN_2_5_VL      = "qwen/qwen2.5-vl-7b-instruct:free"
     NEMOTRON_12B_VL  = "nvidia/nemotron-nano-12b-v2-vl:free"
 
     # --- OpenRouter free models (text-only) ---
     QWEN3_NEXT_80B   = "qwen/qwen3-next-80b-a3b-instruct:free"
+    NVIDIA_NEMOTRON_WEB = "nvidia/nemotron-3-nano-30b:free:online"
     GLM_45_AIR       = "z-ai/glm-4.5-air:free"
     STEPFUN_FLASH    = "stepfun/step-3.5-flash:free"
     ARCEE_TRINITY    = "arcee-ai/trinity-large-preview:free"
@@ -257,12 +259,14 @@ NO_SCHEMA_MODELS: frozenset[str] = frozenset({
 
 TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
     TaskType.PAGE_TAG_VISION: [
+        ModelID.QWEN_2_5_VL,
         ModelID.QWEN3_VL_30B,
         ModelID.NEMOTRON_12B_VL,
         ModelID.GEMINI_25_FLASH,
     ],
     TaskType.PAGE_TAG_TEXT: [
         ModelID.GEMINI_25_FLASH,
+        ModelID.ARCEE_TRINITY,
         ModelID.QWEN3_NEXT_80B,
         ModelID.STEPFUN_FLASH,
         ModelID.GLM_45_AIR,
@@ -274,29 +278,30 @@ TASK_MODEL_CHAIN: dict[TaskType, list[ModelID]] = {
         ModelID.MISTRAL_SMALL,
     ],
     TaskType.NOVELTY: [
+        ModelID.NVIDIA_NEMOTRON_WEB,
         ModelID.GEMINI_25_FLASH,
-        ModelID.QWEN3_NEXT_80B,
         ModelID.GLM_45_AIR,
     ],
     TaskType.FACTCHECK: [
         ModelID.GEMINI_25_FLASH,
+        ModelID.QWEN3_VL_30B,
         ModelID.QWEN3_NEXT_80B,
         ModelID.STEPFUN_FLASH,
     ],
     TaskType.CONSISTENCY: [
         ModelID.GEMINI_25_FLASH,
         ModelID.GLM_45_AIR,
-        ModelID.QWEN3_NEXT_80B,
+        ModelID.OPENROUTER_AUTO,
     ],
     TaskType.AUTHENTICITY: [
         ModelID.GEMINI_25_FLASH,
         ModelID.STEPFUN_FLASH,
         ModelID.GLM_45_AIR,
-        ModelID.QWEN3_NEXT_80B,
+        ModelID.OPENROUTER_AUTO,
     ],
     TaskType.EXECUTIVE_SUMMARY: [
-        ModelID.GEMINI_25_FLASH,
         ModelID.ARCEE_TRINITY,
+        ModelID.GEMINI_25_FLASH,
         ModelID.OPENROUTER_AUTO,
     ],
 }

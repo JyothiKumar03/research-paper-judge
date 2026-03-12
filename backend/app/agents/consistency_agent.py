@@ -14,7 +14,7 @@ log = get_logger(__name__)
 
 _SKIP_TAGS = {"REFERENCES", "ACKNOWLEDGMENTS", "TITLE"}
 
-_SEVERITY_PENALTY = {"HIGH": 20, "MEDIUM": 10, "LOW": 5}
+_SEVERITY_PENALTY = {"HIGH": 15, "MEDIUM": 10, "LOW": 5}
 _SEVERITY_MAP = {"HIGH": FindingSeverity.HIGH, "MEDIUM": FindingSeverity.MEDIUM, "LOW": FindingSeverity.LOW}
 
 

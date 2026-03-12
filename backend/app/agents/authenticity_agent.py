@@ -2,7 +2,7 @@ import time
 
 import asyncpg
 
-from app.constants import AgentName, AgentStatus, FindingSeverity, RiskLevel, TaskType
+from app.constants import AgentName, AgentStatus, FindingSeverity, TaskType
 from app.db import get_pages_by_paper, get_paper, insert_agent_result
 from app.prompts.authenticity import AUTHENTICITY_JSON_SCHEMA, AUTHENTICITY_SYSTEM, build_authenticity_prompt
 from app.services.llm_service import LLMExhaustedError, build_model_chain, call_llm
@@ -15,17 +15,11 @@ log = get_logger(__name__)
 _RESULTS_TAGS = {"RESULTS", "DISCUSSION", "EXPERIMENTS"}
 _METHODOLOGY_TAGS = {"METHODOLOGY", "BACKGROUND"}
 
-_RISK_PENALTY = {"HIGH": 25, "MEDIUM": 15, "LOW": 5}
+_RISK_PENALTY = {"HIGH": 15, "MEDIUM": 10, "LOW": 5}
 _RISK_TO_SEVERITY = {
     "HIGH": FindingSeverity.HIGH,
     "MEDIUM": FindingSeverity.MEDIUM,
     "LOW": FindingSeverity.LOW,
-}
-_OVERALL_RISK_SCORE = {
-    RiskLevel.HIGH: 20.0,
-    RiskLevel.MEDIUM: 55.0,
-    RiskLevel.LOW: 80.0,
-    RiskLevel.NONE: 100.0,
 }
 
 
@@ -86,18 +80,12 @@ async def run(pool: asyncpg.Pool, paper_id: str) -> AgentResult:
         await insert_agent_result(pool, paper_id, result)
         return result
 
-    try:
-        overall_risk = RiskLevel(overall_risk_str)
-    except ValueError:
-        overall_risk = RiskLevel.NONE
-
     flag_penalty = sum(
         _RISK_PENALTY.get(f.get("risk_level", "LOW"), 5)
         for f in red_flags
         if isinstance(f, dict)
     )
-    base_score = _OVERALL_RISK_SCORE[overall_risk]
-    score = max(0.0, min(base_score, 100.0 - flag_penalty))
+    score = max(0.0, 100.0 - flag_penalty)
 
     findings = [
         Finding(
